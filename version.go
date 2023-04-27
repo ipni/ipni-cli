@@ -23,24 +23,11 @@ func init() {
 		return
 	}
 
-	// If rcs is modified, then append the revision to the version.
-	var modified bool
-	var revision string
-	var found int
+	// Append the revision to the version.
 	for i := range bi.Settings {
-		switch bi.Settings[i].Key {
-		case "vcs.modified":
-			found++
-			modified = bi.Settings[i].Value == "true"
-		case "vcs.revision":
-			found++
-			revision = bi.Settings[i].Value
-		}
-		if found == 2 {
+		if bi.Settings[i].Key == "vcs.revision" {
+			version += "-" + bi.Settings[i].Value
 			break
 		}
-	}
-	if modified {
-		version += "+" + revision
 	}
 }
