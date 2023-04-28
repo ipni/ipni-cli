@@ -18,8 +18,8 @@ import (
 func main() {
 	app := &cli.App{
 		Name: "provider",
-		Usage: "Show information about one or more providers known to an indexer. " +
-			"Read provider IDs from stdin if none specified.",
+		Usage: "Show information about one or more providers known to an indexer.\n" +
+			"Reads provider IDs from stdin if none are specified.",
 		Flags:  providerFlags,
 		Action: providerAction,
 	}

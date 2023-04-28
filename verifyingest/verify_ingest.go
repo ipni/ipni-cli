@@ -32,56 +32,53 @@ var (
 
 func main() {
 	app := &cli.App{
-		Name:  "verify-ingest",
-		Usage: "Verifies an indexer's ingestion of multihashes read from a publisher, a CAR file or a CARv2 Index",
-		Description: `This command verifies whether a list of multihashes are ingested by an indexer node with the 
+		Name: "verify-ingest",
+		Usage: "Verifies an indexer's ingestion of multihashes.\n" +
+			"Multihashes can be read from a publisher, from a CAR file, or from a CARv2 Index",
+		Description: `This command verifies whether a list of multihashes are ingested by an indexer and have the 
 expected provider Peer ID. The multihashes to verify can be supplied from one of the following 
 sources:
 - Provider's GraphSync or HTTP publisher endpoint.
 - Path to a CAR file (i.e. --from-car)
 - Path to a CARv2 index file in iterable multihash format (i.e. --from-car-index)
 
-The multiaddr info may point to the provider's GraphSync or HTTP publisher endpoint. Note that if
-GraphSync endpoint is specified, the "topic" flag is used and must indicate the topic name on which
-advertisements are published. The user may optionally specify an advertisement CID, or latest
-advertisement seen by the indexer, as the source of multihash entries. If not specified, the latest
-advertisement is fetched from the publisher and its entries are used as the source of multihashes.
+If fetching multihashes from an advertisement publisher, then the "topic" flag can specify the topic
+name is the advertisements are published on a non-standard topic. The user may optionally specify an
+advertisement CID, or to use the latest advertisement seen by the indexer, as the source of
+multihash entries. If not specified, the latest advertisement is fetched from the publisher and its
+entries are used as the source of multihashes.
 
 The path to CAR files may point to any CAR version (CARv1 or CARv2). The list of multihashes are
-generated automatically from the CAR payload if no suitable index is present. Note that the index is
-generated if either no index is present or if the existing index format or characteristics do not
-match the desired values.
+generated automatically from the CAR payload if no suitable index is present.
 
 The path to a CARv2 index file must point to an index in iterable multihash format, i.e. have
 'multicodec.CarMultihashIndexSorted'. See: https://github.com/ipld/go-car
 
-In addition to the source or publihashes, the user must also specify the address or URL of the
-indexer node. If not specified, the default value of 'http://localhost:3000' is used.
+The user must also specify the address or URL of the indexer node. If not specified, the default
+value of 'http://localhost:3000' is used.
 
-By default, all of multihashes from the source are used for verification. The user may specify a
-sampling probability to define the chance of each multihash being selected for verification. A
-uniform random distribution is used to select whether a multihash should be used. The random number
-generator is non-deterministic by default. However, a seed may be specified to make the selection
+By default, all multihashes from the source are verified with the indexer. The user may specify a
+sampling probability to define the chance that each multihash is verified. Selection uses a uniform
+random distribution. The random number generator seed may be specified to make the selection
 deterministic for debugging purposes.
 
 Example usage:
 
 * Verify ingest from provider's GraphSync publisher endpoint for a specific advertisement CID,
- selecting 50% of available multihashes using deterministic random number generator, seeded with '1413':
+  selecting 50% of available multihashes using deterministic random number generator, seeded with '1413':
 	./verifyingest --provider-id 12D3KooWE8yt84RVwW3sFcd6WMjbUdWrZer2YtT4dmtj3dHdahSZ \
 		--indexer https://cid.contact \
 		--ad-cid baguqeeqqcbuegh2hzk7sukqpsz24wg3tk4 \
 		--sampling-prob 0.5 --rng-seed 1413
 
 * Verify ingestion from CAR file, selecting 50% of available multihashes using a deterministic 
-random number generator, seeded with '1413':
+  random number generator, seeded with '1413':
 	./verifyingest --provider-id 12D3KooWE8yt84RVwW3sFcd6WMjbUdWrZer2YtT4dmtj3dHdahSZ \
 		--from-car my-dag.car \
 		--indexer 192.168.2.100:3000 \
 		--sampling-prob 0.5 --rng-seed 1413
 
-* Verify ingestion from CARv2 index file using all available multihashes, i.e. unspecified 
-sampling probability defaults to 1.0 (100%):
+* Verify ingestion from CARv2 index file using all available multihashes:
 	./verifyingest --provider-id 12D3KooWE8yt84RVwW3sFcd6WMjbUdWrZer2YtT4dmtj3dHdahSZ \
 		--from-car my-idx.idx \
 		--indexer 192.168.2.100:3000
@@ -94,38 +91,7 @@ The output respectively prints:
 - And finally, total number of multihashes verified.
 
 A verification is considered as passed when the total number of multihashes checked matches the 
-number of multihashes that are indexed with expected provider Peer ID.
-
-Example output:
-
-* Passed verification:
-	Verification result:
-	  # failed to verify:                   0
-	  # unindexed:                          0
-	  # indexed with another provider ID:   0
-	  # indexed with expected provider ID:  1049
-	--------------------------------------------
-	total Multihashes checked:              1049
-	
-	sampling probability:                   1.00
-	RNG seed:                               0
-	
-	🎉 Passed verification check.
-
-* Failed verification:
-	Verification result:
-	  # failed to verify:                   0
-	  # unindexed:                          20
-	  # indexed with another provider ID:   0
-	  # indexed with expected provider ID:  0
-	--------------------------------------------
-	total Multihashes checked:              20
-	
-	sampling probability:                   0.50
-	RNG seed:                               42
-	
-	❌ Failed verification check.
-`,
+number of multihashes that are indexed with the expected provider Peer ID.`,
 		Flags:  verifyIngestFlags,
 		Before: beforeVerifyIngest,
 		Action: verifyIngestAction,
