@@ -15,11 +15,19 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
+// ./provider --all -i dev.cid.contact -id | ./provider -v -i cid.contact -id
 func main() {
 	app := &cli.App{
 		Name: "provider",
 		Usage: "Show information about one or more providers known to an indexer.\n" +
 			"Reads provider IDs from stdin if none are specified.",
+		Description: `The -v flag inverts the selection of providers, and shows all that are not specified.
+This can be used to filter out provideres from the returned list. Here is an example example that
+shows using the output of one provider command to filter the output of another, to see which
+providers cid.contact knows about that dev.cid.contact does not:
+
+    provider --all -i dev.cid.contact -id | provider -v -i cid.contact -id
+`,
 		Flags:  providerFlags,
 		Action: providerAction,
 	}
@@ -40,17 +48,34 @@ var providerFlags = []cli.Flag{
 	},
 	&cli.StringSliceFlag{
 		Name:    "pid",
-		Usage:   "Provider's peer ID, multiple allowed. '*' lists all providers.",
+		Usage:   "Provider's peer ID, multiple allowed",
 		Aliases: []string{"p"},
+	},
+	&cli.BoolFlag{
+		Name:    "all",
+		Usage:   "Show all providers. Ignores any specified provider IDs",
+		Aliases: []string{"a"},
 	},
 	&cli.BoolFlag{
 		Name:    "id-only",
 		Usage:   "Only show provider's peer ID",
 		Aliases: []string{"id"},
 	},
+	&cli.BoolFlag{
+		Name:    "invert",
+		Usage:   "Invert selection, show all providers except those specified",
+		Aliases: []string{"v"},
+	},
 }
 
 func providerAction(cctx *cli.Context) error {
+	if cctx.Bool("all") {
+		if cctx.Bool("invert") {
+			return errors.New("cannot use --all with --invert")
+		}
+		return listProviders(cctx, nil)
+	}
+
 	peerIDs := cctx.StringSlice("pid")
 	if len(peerIDs) == 0 {
 		// Read from stdin.
@@ -68,12 +93,13 @@ func providerAction(cctx *cli.Context) error {
 		}
 	}
 
-	uniquePeerIDs := make(map[string]struct{})
+	uniquePeerIDs := make(map[peer.ID]struct{}, len(peerIDs))
 	for _, pid := range peerIDs {
-		if pid == "*" {
-			return listProviders(cctx)
+		peerID, err := peer.Decode(pid)
+		if err != nil {
+			return fmt.Errorf("invalid peer ID %s: %s", pid, err)
 		}
-		uniquePeerIDs[pid] = struct{}{}
+		uniquePeerIDs[peerID] = struct{}{}
 	}
 
 	cl, err := client.New(cctx.String("indexer"))
@@ -81,11 +107,15 @@ func providerAction(cctx *cli.Context) error {
 		return err
 	}
 
+	if cctx.Bool("invert") {
+		return listProviders(cctx, uniquePeerIDs)
+	}
+
 	var errCount int
-	for pid := range uniquePeerIDs {
-		err = getProvider(cctx, cl, pid)
+	for peerID := range uniquePeerIDs {
+		err = getProvider(cctx, cl, peerID)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error getting provider %s: %s\n", pid, err)
+			fmt.Fprintf(os.Stderr, "Error getting provider %s: %s\n", peerID, err)
 			errCount++
 		}
 	}
@@ -96,11 +126,7 @@ func providerAction(cctx *cli.Context) error {
 	return nil
 }
 
-func getProvider(cctx *cli.Context, cl *client.Client, peerIDStr string) error {
-	peerID, err := peer.Decode(peerIDStr)
-	if err != nil {
-		return err
-	}
+func getProvider(cctx *cli.Context, cl *client.Client, peerID peer.ID) error {
 	prov, err := cl.GetProvider(cctx.Context, peerID)
 	if err != nil {
 		var ae *apierror.Error
@@ -122,7 +148,7 @@ func getProvider(cctx *cli.Context, cl *client.Client, peerIDStr string) error {
 	return nil
 }
 
-func listProviders(cctx *cli.Context) error {
+func listProviders(cctx *cli.Context, exclude map[peer.ID]struct{}) error {
 	cl, err := client.New(cctx.String("indexer"))
 	if err != nil {
 		return err
@@ -138,12 +164,18 @@ func listProviders(cctx *cli.Context) error {
 
 	if cctx.Bool("id-only") {
 		for _, pinfo := range provs {
+			if _, ok := exclude[pinfo.AddrInfo.ID]; ok {
+				continue
+			}
 			fmt.Println(pinfo.AddrInfo.ID)
 		}
 		return nil
 	}
 
 	for _, pinfo := range provs {
+		if _, ok := exclude[pinfo.AddrInfo.ID]; ok {
+			continue
+		}
 		showProviderInfo(pinfo)
 	}
 
