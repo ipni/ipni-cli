@@ -22,9 +22,10 @@ func main() {
 		Usage: "Show information about one or more providers known to an indexer.\n" +
 			"Reads provider IDs from stdin if none are specified.",
 		Description: `The -v flag inverts the selection of providers, and shows all that are not specified.
-This can be used to filter out provideres from the returned list. Here is an example example that
-shows using the output of one provider command to filter the output of another, to see which
-providers cid.contact knows about that dev.cid.contact does not:
+This can be used to filter out provideres from the returned list.
+
+Here is an example that shows using the output of one provider command to filter the output of
+another, to see which providers cid.contact knows about that dev.cid.contact does not:
 
     provider --all -i dev.cid.contact -id | provider -v -i cid.contact -id
 `,
