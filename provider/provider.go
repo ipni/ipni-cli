@@ -77,8 +77,8 @@ func providerAction(cctx *cli.Context) error {
 		return listProviders(cctx, nil)
 	}
 
-	peerIDs := cctx.StringSlice("pid")
-	if len(peerIDs) == 0 {
+	pids := cctx.StringSlice("pid")
+	if len(pids) == 0 {
 		// Read from stdin.
 		scanner := bufio.NewScanner(os.Stdin)
 		for scanner.Scan() {
@@ -87,20 +87,25 @@ func providerAction(cctx *cli.Context) error {
 				// Skip empty lines.
 				continue
 			}
-			peerIDs = append(peerIDs, p)
+			pids = append(pids, p)
 		}
 		if err := scanner.Err(); err != nil {
 			return err
 		}
 	}
 
-	uniquePeerIDs := make(map[peer.ID]struct{}, len(peerIDs))
-	for _, pid := range peerIDs {
+	peerIDs := make([]peer.ID, 0, len(pids))
+	seen := make(map[string]struct{}, len(pids))
+	for _, pid := range pids {
+		if _, ok := seen[pid]; ok {
+			// Skip duplicates.
+			continue
+		}
 		peerID, err := peer.Decode(pid)
 		if err != nil {
 			return fmt.Errorf("invalid peer ID %s: %s", pid, err)
 		}
-		uniquePeerIDs[peerID] = struct{}{}
+		peerIDs = append(peerIDs, peerID)
 	}
 
 	cl, err := client.New(cctx.String("indexer"))
@@ -109,11 +114,11 @@ func providerAction(cctx *cli.Context) error {
 	}
 
 	if cctx.Bool("invert") {
-		return listProviders(cctx, uniquePeerIDs)
+		return listProviders(cctx, peerIDs)
 	}
 
 	var errCount int
-	for peerID := range uniquePeerIDs {
+	for _, peerID := range peerIDs {
 		err = getProvider(cctx, cl, peerID)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error getting provider %s: %s\n", peerID, err)
@@ -149,7 +154,7 @@ func getProvider(cctx *cli.Context, cl *client.Client, peerID peer.ID) error {
 	return nil
 }
 
-func listProviders(cctx *cli.Context, exclude map[peer.ID]struct{}) error {
+func listProviders(cctx *cli.Context, peerIDs []peer.ID) error {
 	cl, err := client.New(cctx.String("indexer"))
 	if err != nil {
 		return err
@@ -161,6 +166,14 @@ func listProviders(cctx *cli.Context, exclude map[peer.ID]struct{}) error {
 	if len(provs) == 0 {
 		fmt.Println("No providers registered with indexer")
 		return nil
+	}
+
+	var exclude map[peer.ID]struct{}
+	if len(peerIDs) != 0 {
+		exclude = make(map[peer.ID]struct{}, len(peerIDs))
+		for _, pid := range peerIDs {
+			exclude[pid] = struct{}{}
+		}
 	}
 
 	if cctx.Bool("id-only") {

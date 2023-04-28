@@ -1,10 +1,12 @@
 package main
 
 import (
+	"bufio"
 	"encoding/base64"
 	"errors"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/ipfs/go-cid"
 	"github.com/ipfs/go-datastore"
@@ -18,15 +20,19 @@ func main() {
 		Name:  "advert",
 		Usage: "Show information about an advertisement from a specified publisher",
 		ArgsUsage: "The publisher's endpoint address in form of libp2p multiaddr info.\n" +
-			"Example GraphSync: /ip4/1.2.3.4/tcp/1234/p2p/12D3KooWE8yt84RVwW3sFcd6WMjbUdWrZer2YtT4dmtj3dHdahSZ\n" +
-			"Example HTTP:      /ip4/1.2.3.4/tcp/1234/http/12D3KooWE8yt84RVwW3sFcd6WMjbUdWrZer2YtT4dmtj3dHdahSZ",
-		Description: `Advertisement CIDs may be specified using the -cid flag. If not specified the latest advertisement is fetched.
+			"       Example GraphSync: /ip4/1.2.3.4/tcp/1234/p2p/12D3KooWE8yt84RVwW3sFcd6WMjbUdWrZer2YtT4dmtj3dHdahSZ\n" +
+			"       Example HTTP:      /ip4/1.2.3.4/tcp/1234/http/12D3KooWE8yt84RVwW3sFcd6WMjbUdWrZer2YtT4dmtj3dHdahSZ",
+		Description: `Advertisement CIDs may be specified using the -cid flag, or --head to get the latest advertisement.
 Multiple CIDs may be specified to fetch multiple advertisements. Example Usage:
 
-    ./advert
+    advert
         -cid baguqeeradjagxlgpsy3xn2jrx52us5tl3mp5n5kq6kkg2ul3i6xzyrujbhbq \
         -cid baguqeerazru3iegjkmjj45xfrheasxfxm4vwxotydl6mpt52zvnv5rx42ssq \
         /ip4/212.248.62.42/tcp/17162/p2p/12D3KooWCYL6mn3p7W5WoaC3yYfbsovaDkQcpyxMFG9PtJUmSjzF
+
+If no CID are specidied then CIDs are read from stdin, one per line.
+
+    cat cids.txt | advert /ip4/212.248.62.42/tcp/17162/p2p/12D3KooWCYL6mn3p7W5WoaC3yYfbsovaDkQcpyxMFG9PtJUmSjzF
 `,
 		Flags:  advertFlags,
 		Before: beforeAdvert,
@@ -50,6 +56,10 @@ var advertFlags = []cli.Flag{
 		Usage:   "Topic on which index advertisements are published. Only needed if connecting to provider via Graphsync endpoint.",
 		Value:   "/indexer/ingest/mainnet",
 		Aliases: []string{"t"},
+	},
+	&cli.BoolFlag{
+		Name:  "head",
+		Usage: "Fetch the latest advertisement from the publisher",
 	},
 	&cli.BoolFlag{
 		Name:    "print-entries",
@@ -81,16 +91,48 @@ func advertAction(cctx *cli.Context) error {
 	var adCids []cid.Cid
 	cidArgs := cctx.StringSlice("cid")
 	if len(cidArgs) != 0 {
-		adCids = make([]cid.Cid, len(cidArgs))
-		for i := range cidArgs {
-			adCids[i], err = cid.Decode(cidArgs[i])
+		seen := make(map[string]struct{}, len(cidArgs))
+		adCids = make([]cid.Cid, 0, len(cidArgs))
+		for _, cidStr := range cidArgs {
+			if _, ok := seen[cidStr]; ok {
+				// Skip duplicate CIDs.
+				continue
+			}
+			cid, err := cid.Decode(cidStr)
 			if err != nil {
 				return fmt.Errorf("bad advertisement CID arqument: %w", err)
 			}
+			adCids = append(adCids, cid)
 		}
-	} else {
+	}
+	if cctx.Bool("head") {
 		// Fetch latest advertisement
-		adCids = []cid.Cid{cid.Undef}
+		adCids = append(adCids, cid.Undef)
+	}
+
+	// If no CIDs specified, read from stdin.
+	if len(adCids) == 0 {
+		seen := make(map[string]struct{})
+		scanner := bufio.NewScanner(os.Stdin)
+		for scanner.Scan() {
+			cidStr := strings.TrimSpace(scanner.Text())
+			if cidStr == "" {
+				// Skip empty lines.
+				continue
+			}
+			if _, ok := seen[cidStr]; ok {
+				// Skip duplicate CIDs.
+				continue
+			}
+			cid, err := cid.Decode(cidStr)
+			if err != nil {
+				return fmt.Errorf("bad advertisement CID arqument: %w", err)
+			}
+			adCids = append(adCids, cid)
+		}
+		if err := scanner.Err(); err != nil {
+			return err
+		}
 	}
 
 	provClient, err := adpub.MakeClient(*addrInfo, cctx.String("topic"), cctx.Int64("entries-depth-limit"))

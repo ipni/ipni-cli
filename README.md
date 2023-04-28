@@ -29,7 +29,8 @@ To see instructions for use, run any individual cli application with the `--help
 
 ## Build
 
-If working within a clone of this repo, use `make` to build the all the executables and place them in a `bin` directory.
+If working within a clone of this repo, run `make` to build the all the executables and put them in the `bin` directory.
 
 ## License
+
 [SPDX-License-Identifier: Apache-2.0 OR MIT](LICENSE.md)
