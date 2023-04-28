@@ -1,9 +1,12 @@
-package command
+package main
 
 import (
+	"bufio"
 	"errors"
 	"fmt"
 	"net/http"
+	"os"
+	"strings"
 
 	"github.com/ipni/go-libipni/apierror"
 	client "github.com/ipni/go-libipni/find/client/http"
@@ -12,40 +15,89 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-var ProvidersCmd = &cli.Command{
-	Name:  "providers",
-	Usage: "Commands to get provider information",
-	Subcommands: []*cli.Command{
-		getProvidersCmd,
-		listProvidersCmd,
+func main() {
+	app := &cli.App{
+		Name: "provider",
+		Usage: "Show information about one or more providers known to an indexer. " +
+			"Read provider IDs from stdin if none specified.",
+		Flags:  providerFlags,
+		Action: providerAction,
+	}
+
+	if err := app.Run(os.Args); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+}
+
+var providerFlags = []cli.Flag{
+	&cli.StringFlag{
+		Name:    "indexer",
+		Usage:   "Indexer URL",
+		EnvVars: []string{"INDEXER"},
+		Aliases: []string{"i"},
+		Value:   "http://localhost:3000",
+	},
+	&cli.StringSliceFlag{
+		Name:    "pid",
+		Usage:   "Provider's peer ID, multiple allowed. '*' lists all providers.",
+		Aliases: []string{"p"},
+	},
+	&cli.BoolFlag{
+		Name:    "id-only",
+		Usage:   "Only show provider's peer ID",
+		Aliases: []string{"id"},
 	},
 }
 
-var getProvidersCmd = &cli.Command{
-	Name:  "get",
-	Usage: "Show information about a specific provider",
-	Flags: []cli.Flag{
-		indexerURLFlag,
-		providerFlag,
-	},
-	Action: getProvidersAction,
-}
+func providerAction(cctx *cli.Context) error {
+	peerIDs := cctx.StringSlice("pid")
+	if len(peerIDs) == 0 {
+		// Read from stdin.
+		scanner := bufio.NewScanner(os.Stdin)
+		for scanner.Scan() {
+			p := strings.TrimSpace(scanner.Text())
+			if p == "" {
+				// Skip empty lines.
+				continue
+			}
+			peerIDs = append(peerIDs, p)
+		}
+		if err := scanner.Err(); err != nil {
+			return err
+		}
+	}
 
-var listProvidersCmd = &cli.Command{
-	Name:  "list",
-	Usage: "Show information about all known providers",
-	Flags: []cli.Flag{
-		indexerURLFlag,
-	},
-	Action: listProvidersAction,
-}
+	uniquePeerIDs := make(map[string]struct{})
+	for _, pid := range peerIDs {
+		if pid == "*" {
+			return listProviders(cctx)
+		}
+		uniquePeerIDs[pid] = struct{}{}
+	}
 
-func getProvidersAction(cctx *cli.Context) error {
 	cl, err := client.New(cctx.String("indexer"))
 	if err != nil {
 		return err
 	}
-	peerID, err := peer.Decode(cctx.String("provider"))
+
+	var errCount int
+	for pid := range uniquePeerIDs {
+		err = getProvider(cctx, cl, pid)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error getting provider %s: %s\n", pid, err)
+			errCount++
+		}
+	}
+
+	if errCount != 0 {
+		return fmt.Errorf("failed to get %d providers", errCount)
+	}
+	return nil
+}
+
+func getProvider(cctx *cli.Context, cl *client.Client, peerIDStr string) error {
+	peerID, err := peer.Decode(peerIDStr)
 	if err != nil {
 		return err
 	}
@@ -61,11 +113,16 @@ func getProvidersAction(cctx *cli.Context) error {
 		return errors.New("provider not found on indexer")
 	}
 
+	if cctx.Bool("id-only") {
+		fmt.Println(prov.AddrInfo.ID)
+		return nil
+	}
+
 	showProviderInfo(prov)
 	return nil
 }
 
-func listProvidersAction(cctx *cli.Context) error {
+func listProviders(cctx *cli.Context) error {
 	cl, err := client.New(cctx.String("indexer"))
 	if err != nil {
 		return err
@@ -76,6 +133,13 @@ func listProvidersAction(cctx *cli.Context) error {
 	}
 	if len(provs) == 0 {
 		fmt.Println("No providers registered with indexer")
+		return nil
+	}
+
+	if cctx.Bool("id-only") {
+		for _, pinfo := range provs {
+			fmt.Println(pinfo.AddrInfo.ID)
+		}
 		return nil
 	}
 

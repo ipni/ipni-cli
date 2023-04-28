@@ -1,8 +1,9 @@
-package command
+package main
 
 import (
 	"encoding/base64"
 	"fmt"
+	"os"
 
 	"github.com/ipfs/go-cid"
 	"github.com/ipni/go-libipni/find/client"
@@ -13,11 +14,18 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-var FindCmd = &cli.Command{
-	Name:   "find",
-	Usage:  "Find value by CID or multihash in indexer",
-	Flags:  findFlags,
-	Action: findAction,
+func main() {
+	app := &cli.App{
+		Name:   "find",
+		Usage:  "Find value by CID or multihash in indexer",
+		Flags:  findFlags,
+		Action: findAction,
+	}
+
+	if err := app.Run(os.Args); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
 }
 
 var findFlags = []cli.Flag{
@@ -31,17 +39,23 @@ var findFlags = []cli.Flag{
 		Usage:    "Specify CID to use as indexer key, multiple OK",
 		Required: false,
 	},
-	indexerURLFlag,
+	&cli.StringFlag{
+		Name:    "indexer",
+		Usage:   "URL of indexer to query",
+		EnvVars: []string{"INDEXER"},
+		Aliases: []string{"i"},
+		Value:   "http://localhost:3000",
+	},
 	&cli.StringFlag{
 		Name:     "indexerid",
-		Usage:    "Indexer peer ID to use when protocol=libp2p",
+		Usage:    "libp2p peer ID of indexer, for use when protocol=libp2p",
 		Aliases:  []string{"iid"},
 		EnvVars:  []string{"INDEXER_ID"},
 		Required: false,
 	},
 	&cli.StringFlag{
 		Name:     "protocol",
-		Usage:    "Protocol to query the indexer (http, libp2p currently supported)",
+		Usage:    "Protocol to query the indexer (http, libp2p)",
 		Value:    "http",
 		Required: false,
 	},
@@ -52,6 +66,10 @@ func findAction(cctx *cli.Context) error {
 
 	mhArgs := cctx.StringSlice("mh")
 	cidArgs := cctx.StringSlice("cid")
+	if len(mhArgs) == 0 && len(cidArgs) == 0 {
+		return fmt.Errorf("must specify at least one multihash or CID")
+	}
+
 	mhs := make([]multihash.Multihash, 0, len(mhArgs)+len(cidArgs))
 	for i := range mhArgs {
 		m, err := multihash.FromB58String(mhArgs[i])

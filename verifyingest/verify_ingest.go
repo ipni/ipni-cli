@@ -1,4 +1,4 @@
-package command
+package main
 
 import (
 	"errors"
@@ -15,7 +15,7 @@ import (
 	"github.com/ipni/go-libipni/apierror"
 	httpfindclient "github.com/ipni/go-libipni/find/client/http"
 	"github.com/ipni/go-libipni/find/model"
-	"github.com/ipni/ipni-cli/command/adpub"
+	"github.com/ipni/ipni-cli/internal/adpub"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/multiformats/go-multicodec"
 	"github.com/multiformats/go-multihash"
@@ -30,10 +30,11 @@ var (
 	printUnindexedMhs bool
 )
 
-var VerifyIngestCmd = &cli.Command{
-	Name:  "verify-ingest",
-	Usage: "Verifies an indexer's ingestion of multihashes read from a publisher, a CAR file or a CARv2 Index",
-	Description: `This command verifies whether a list of multihashes are ingested by an indexer node with the 
+func main() {
+	app := &cli.App{
+		Name:  "verify-ingest",
+		Usage: "Verifies an indexer's ingestion of multihashes read from a publisher, a CAR file or a CARv2 Index",
+		Description: `This command verifies whether a list of multihashes are ingested by an indexer node with the 
 expected provider Peer ID. The multihashes to verify can be supplied from one of the following 
 sources:
 - Provider's GraphSync or HTTP publisher endpoint.
@@ -67,21 +68,21 @@ Example usage:
 
 * Verify ingest from provider's GraphSync publisher endpoint for a specific advertisement CID,
  selecting 50% of available multihashes using deterministic random number generator, seeded with '1413':
-	./ipni verify-ingest --provider-id 12D3KooWE8yt84RVwW3sFcd6WMjbUdWrZer2YtT4dmtj3dHdahSZ \
+	./verifyingest --provider-id 12D3KooWE8yt84RVwW3sFcd6WMjbUdWrZer2YtT4dmtj3dHdahSZ \
 		--indexer https://cid.contact \
-		--ad-cid baguqeeqqcbuegh2hzk7sukqpsz24wg3tk4
+		--ad-cid baguqeeqqcbuegh2hzk7sukqpsz24wg3tk4 \
 		--sampling-prob 0.5 --rng-seed 1413
 
 * Verify ingestion from CAR file, selecting 50% of available multihashes using a deterministic 
 random number generator, seeded with '1413':
-	./ipni verify-ingest --provider-id 12D3KooWE8yt84RVwW3sFcd6WMjbUdWrZer2YtT4dmtj3dHdahSZ \
+	./verifyingest --provider-id 12D3KooWE8yt84RVwW3sFcd6WMjbUdWrZer2YtT4dmtj3dHdahSZ \
 		--from-car my-dag.car \
 		--indexer 192.168.2.100:3000 \
 		--sampling-prob 0.5 --rng-seed 1413
 
 * Verify ingestion from CARv2 index file using all available multihashes, i.e. unspecified 
 sampling probability defaults to 1.0 (100%):
-	./ipni verify-ingest --provider-id 12D3KooWE8yt84RVwW3sFcd6WMjbUdWrZer2YtT4dmtj3dHdahSZ \
+	./verifyingest --provider-id 12D3KooWE8yt84RVwW3sFcd6WMjbUdWrZer2YtT4dmtj3dHdahSZ \
 		--from-car my-idx.idx \
 		--indexer 192.168.2.100:3000
 
@@ -125,78 +126,105 @@ Example output:
 	
 	❌ Failed verification check.
 `,
-	Flags: []cli.Flag{
-		&cli.StringFlag{
-			Name:    "provider-id",
-			Aliases: []string{"pid"},
-			Usage: "The peer ID of the provider associated with multihashes. " +
-				"If neither from-car nor from-car-index are specified, then get multihashes from this provider's publisher. " +
-				"The advertisement publisher address is automatically discovered by querying the indexer with provider's peer ID.",
-			Required:    true,
-			Destination: &provId,
-		},
-		&cli.PathFlag{
-			Name:    "from-car",
-			Usage:   "Path to the CAR file from which to extract the list of multihash for verification.",
-			Aliases: []string{"fc"},
-		},
-		&cli.PathFlag{
-			Name:    "from-car-index",
-			Usage:   "Path to the CAR index file from which to extract the list of multihash for verification.",
-			Aliases: []string{"fci"},
-		},
-		indexerURLFlag,
-		&cli.Float64Flag{
-			Name:        "sampling-prob",
-			Aliases:     []string{"sp"},
-			Usage:       "The uniform random probability of selecting a multihash for verification specified as a value between 0.0 and 1.0.",
-			DefaultText: "'1.0' i.e. 100% of multihashes will be checked for verification.",
-			Value:       1.0,
-			Destination: &samplingProb,
-		},
-		&cli.Int64Flag{
-			Name:    "rng-seed",
-			Aliases: []string{"rs"},
-			Usage: "The seed to use for the random number generator that selects verification samples. " +
-				"This flag has no impact if sampling probability is set to 1.0.",
-			DefaultText: "Non-deterministic.",
-			Destination: &rngSeed,
-		},
-		&cli.StringFlag{
-			Name:        "ad-cid",
-			Aliases:     []string{"a"},
-			Usage:       "The advertisement CID to start fetching the chain at. Only takes effect if multihashes read from publisher.",
-			DefaultText: "Dynamically fetch the latest advertisement CID",
-		},
-		&cli.BoolFlag{
-			Name: "ad-last-seen",
-			Usage: "Start fetching advertisement chain at the last one seen by the indexer. " +
-				"This is an alternative to ad-cid and only takes effect if multihashes read from publisher.",
-			DefaultText: "Dynamically fetch the latest advertisement CID",
-		},
-		&cli.IntFlag{
-			Name:        "ad-depth-limit",
-			Aliases:     []string{"adl"},
-			Usage:       "The number of advertisements to verify. Only takes effect if multihashes read from publisher.",
-			Value:       1,
-			DefaultText: "Verify a single advertisement only.",
-		},
-		adEntriesDepthLimitFlag,
-		&cli.StringFlag{
-			Name:    "topic",
-			Usage:   "The topic name on which advertisements are published. Only takes effect if multihashes read from publisher.",
-			Value:   "/indexer/ingest/mainnet",
-			Aliases: []string{"t"},
-		},
-		&cli.BoolFlag{
-			Name:        "print-unindexed-mhs",
-			Usage:       "Print multihashes that are not indexed by the indexer. Only printed if the indexer is successfully contacted.",
-			Aliases:     []string{"pum"},
-			Destination: &printUnindexedMhs,
-		},
+		Flags:  verifyIngestFlags,
+		Before: beforeVerifyIngest,
+		Action: verifyIngestAction,
+	}
+
+	if err := app.Run(os.Args); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+}
+
+var verifyIngestFlags = []cli.Flag{
+	&cli.StringFlag{
+		Name:    "provider-id",
+		Aliases: []string{"pid"},
+		Usage: "The peer ID of the provider associated with multihashes. " +
+			"If neither from-car nor from-car-index are specified, then get multihashes from this provider's publisher. " +
+			"The advertisement publisher address is automatically discovered by querying the indexer with provider's peer ID.",
+		Required:    true,
+		Destination: &provId,
 	},
-	Before: beforeVerifyIngest,
-	Action: verifyIngestAction,
+	&cli.PathFlag{
+		Name:    "from-car",
+		Usage:   "Path to the CAR file from which to extract the list of multihash for verification.",
+		Aliases: []string{"fc"},
+	},
+	&cli.PathFlag{
+		Name:    "from-car-index",
+		Usage:   "Path to the CAR index file from which to extract the list of multihash for verification.",
+		Aliases: []string{"fci"},
+	},
+	&cli.StringFlag{
+		Name:    "indexer",
+		Usage:   "URL of indexer to query",
+		EnvVars: []string{"INDEXER"},
+		Aliases: []string{"i"},
+		Value:   "http://localhost:3000",
+	},
+	&cli.Float64Flag{
+		Name:        "sampling-prob",
+		Aliases:     []string{"sp"},
+		Usage:       "The uniform random probability of selecting a multihash for verification specified as a value between 0.0 and 1.0.",
+		DefaultText: "'1.0' i.e. 100% of multihashes will be checked for verification.",
+		Value:       1.0,
+		Destination: &samplingProb,
+	},
+	&cli.Int64Flag{
+		Name:    "rng-seed",
+		Aliases: []string{"rs"},
+		Usage: "The seed to use for the random number generator that selects verification samples. " +
+			"This flag has no impact if sampling probability is set to 1.0.",
+		DefaultText: "Non-deterministic.",
+		Destination: &rngSeed,
+	},
+	&cli.StringFlag{
+		Name:        "ad-cid",
+		Aliases:     []string{"a"},
+		Usage:       "The advertisement CID to start fetching the chain at. Only takes effect if multihashes read from publisher.",
+		DefaultText: "Dynamically fetch the latest advertisement CID",
+	},
+	&cli.BoolFlag{
+		Name: "ad-last-seen",
+		Usage: "Start fetching advertisement chain at the last one seen by the indexer. " +
+			"This is an alternative to ad-cid and only takes effect if multihashes read from publisher.",
+		DefaultText: "Dynamically fetch the latest advertisement CID",
+	},
+	&cli.IntFlag{
+		Name:        "ad-depth-limit",
+		Aliases:     []string{"adl"},
+		Usage:       "The number of advertisements to verify. Only takes effect if multihashes read from publisher.",
+		Value:       1,
+		DefaultText: "Verify a single advertisement only.",
+	},
+	&cli.Int64Flag{
+		Name:        "entries-depth-limit",
+		Aliases:     []string{"edl"},
+		Usage:       "Maximum depth (number of blocks of multihashes) to fetch from advertisement entries chains.",
+		Value:       100,
+		DefaultText: "100 (set to '0' for unlimited)",
+	},
+	&cli.IntFlag{
+		Name:    "batch-size",
+		Aliases: []string{"bs"},
+		Usage: "The number multihashes in each lookup request to the indexer. " +
+			"A smaller batch size will increase the number of requests to the indexer but may avoid timing out waiting for a response.",
+		Value: 4096,
+	},
+	&cli.StringFlag{
+		Name:    "topic",
+		Usage:   "The topic name on which advertisements are published. Only takes effect if multihashes read from publisher.",
+		Value:   "/indexer/ingest/mainnet",
+		Aliases: []string{"t"},
+	},
+	&cli.BoolFlag{
+		Name:        "print-unindexed-mhs",
+		Usage:       "Print multihashes that are not indexed by the indexer. Only printed if the indexer is successfully contacted.",
+		Aliases:     []string{"pum"},
+		Destination: &printUnindexedMhs,
+	},
 }
 
 func beforeVerifyIngest(cctx *cli.Context) error {
@@ -301,11 +329,11 @@ func verifyIngestFromProvider(cctx *cli.Context, provID peer.ID) error {
 		Addrs: provInfo.Publisher.Addrs,
 	}
 	fmt.Println("Publisher:", pubAddrInfo.String())
-	fmt.Printf("Ads/Entries depth: %s/%d\n", adDepthLimitStr, cctx.Int64("ad-entries-depth-limit"))
+	fmt.Printf("Ads/Entries depth: %s/%d\n", adDepthLimitStr, cctx.Int64("entries-depth-limit"))
 	fmt.Println("Topic:", cctx.String("topic"))
 	fmt.Println("Last ad seen by indexer:", provInfo.LastAdvertisement.String())
 
-	pubClient, err := adpub.MakeClient(pubAddrInfo, cctx.String("topic"), cctx.Int64("ad-entries-depth-limit"))
+	pubClient, err := adpub.MakeClient(pubAddrInfo, cctx.String("topic"), cctx.Int64("entries-depth-limit"))
 	if err != nil {
 		return err
 	}
@@ -562,6 +590,7 @@ func (r *verifyResult) print(samplingProb float64, rngSeed int64, printUnindexed
 }
 
 func verifyIngestFromMhs(cctx *cli.Context, find *httpfindclient.Client, wantProvID peer.ID, mhs []multihash.Multihash) (*verifyResult, error) {
+	chunkSize := cctx.Int("batch-size")
 	aggResult := &verifyResult{}
 	for len(mhs) >= chunkSize {
 		result, err := verifyIngest(cctx, find, wantProvID, mhs[:chunkSize])
