@@ -1,26 +1,18 @@
-package main
+package spaddr
 
 import (
 	"errors"
 	"fmt"
-	"os"
 
 	"github.com/ipni/ipni-cli/spaddr/spinfo"
 	"github.com/urfave/cli/v2"
 )
 
-func main() {
-	app := &cli.App{
-		Name:   "spaddr",
-		Usage:  "Get storage provider p2p ID and address from lotus gateway",
-		Flags:  spAddrFlags,
-		Action: spAddrAction,
-	}
-
-	if err := app.Run(os.Args); err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
-	}
+var SPAddrCmd = &cli.Command{
+	Name:   "spaddr",
+	Usage:  "Get storage provider p2p ID and address from lotus gateway",
+	Flags:  spAddrFlags,
+	Action: spAddrAction,
 }
 
 var spAddrFlags = []cli.Flag{

@@ -1,4 +1,4 @@
-package main
+package verifyingest
 
 import (
 	"errors"
@@ -30,12 +30,11 @@ var (
 	printUnindexedMhs bool
 )
 
-func main() {
-	app := &cli.App{
-		Name: "verify-ingest",
-		Usage: "Verifies an indexer's ingestion of multihashes.\n" +
-			"Multihashes can be read from a publisher, from a CAR file, or from a CARv2 Index",
-		Description: `This command verifies whether a list of multihashes are ingested by an indexer and have the 
+var VerifyIngestCmd = &cli.Command{
+	Name: "verify-ingest",
+	Usage: "Verifies an indexer's ingestion of multihashes. " +
+		"Multihashes can be read from a publisher, from a CAR file, or from a CARv2 Index",
+	Description: `This command verifies whether a list of multihashes are ingested by an indexer and have the 
 expected provider Peer ID. The multihashes to verify can be supplied from one of the following 
 sources:
 - Provider's GraphSync or HTTP publisher endpoint.
@@ -92,15 +91,9 @@ The output respectively prints:
 
 A verification is considered as passed when the total number of multihashes checked matches the 
 number of multihashes that are indexed with the expected provider Peer ID.`,
-		Flags:  verifyIngestFlags,
-		Before: beforeVerifyIngest,
-		Action: verifyIngestAction,
-	}
-
-	if err := app.Run(os.Args); err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
-	}
+	Flags:  verifyIngestFlags,
+	Before: beforeVerifyIngest,
+	Action: verifyIngestAction,
 }
 
 var verifyIngestFlags = []cli.Flag{

@@ -5,11 +5,7 @@
 *.out
 
 bin/
-advert/advert
-find/find
-provider/provider
-spaddr/spaddr
-verifyingest/verifyingest
+ipni-cli
 
 *~
 *.car

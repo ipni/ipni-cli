@@ -1,9 +1,8 @@
-package main
+package find
 
 import (
 	"encoding/base64"
 	"fmt"
-	"os"
 
 	"github.com/ipfs/go-cid"
 	"github.com/ipni/go-libipni/find/client"
@@ -14,18 +13,11 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-func main() {
-	app := &cli.App{
-		Name:   "find",
-		Usage:  "Find value by CID or multihash in indexer",
-		Flags:  findFlags,
-		Action: findAction,
-	}
-
-	if err := app.Run(os.Args); err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
-	}
+var FindCmd = &cli.Command{
+	Name:   "find",
+	Usage:  "Find value by CID or multihash in indexer",
+	Flags:  findFlags,
+	Action: findAction,
 }
 
 var findFlags = []cli.Flag{

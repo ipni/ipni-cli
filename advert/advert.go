@@ -1,4 +1,4 @@
-package main
+package advert
 
 import (
 	"bufio"
@@ -15,14 +15,13 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-func main() {
-	app := &cli.App{
-		Name:  "advert",
-		Usage: "Show information about an advertisement from a specified publisher",
-		ArgsUsage: "The publisher's endpoint address in form of libp2p multiaddr info.\n" +
-			"       Example GraphSync: /ip4/1.2.3.4/tcp/1234/p2p/12D3KooWE8yt84RVwW3sFcd6WMjbUdWrZer2YtT4dmtj3dHdahSZ\n" +
-			"       Example HTTP:      /ip4/1.2.3.4/tcp/1234/http/12D3KooWE8yt84RVwW3sFcd6WMjbUdWrZer2YtT4dmtj3dHdahSZ",
-		Description: `Advertisement CIDs may be specified using the -cid flag, or --head to get the latest advertisement.
+var AdvertCmd = &cli.Command{
+	Name:  "advert",
+	Usage: "Show information about an advertisement from a specified publisher",
+	ArgsUsage: "The publisher's endpoint address in form of libp2p multiaddr info.\n" +
+		"       Example GraphSync: /ip4/1.2.3.4/tcp/1234/p2p/12D3KooWE8yt84RVwW3sFcd6WMjbUdWrZer2YtT4dmtj3dHdahSZ\n" +
+		"       Example HTTP:      /ip4/1.2.3.4/tcp/1234/http/12D3KooWE8yt84RVwW3sFcd6WMjbUdWrZer2YtT4dmtj3dHdahSZ",
+	Description: `Advertisement CIDs may be specified using the -cid flag, or --head to get the latest advertisement.
 Multiple CIDs may be specified to fetch multiple advertisements. Example Usage:
 
     advert
@@ -34,15 +33,9 @@ If no CID are specidied then CIDs are read from stdin, one per line.
 
     cat cids.txt | advert /ip4/212.248.62.42/tcp/17162/p2p/12D3KooWCYL6mn3p7W5WoaC3yYfbsovaDkQcpyxMFG9PtJUmSjzF
 `,
-		Flags:  advertFlags,
-		Before: beforeAdvert,
-		Action: advertAction,
-	}
-
-	if err := app.Run(os.Args); err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
-	}
+	Flags:  advertFlags,
+	Before: beforeAdvert,
+	Action: advertAction,
 }
 
 var advertFlags = []cli.Flag{
