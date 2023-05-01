@@ -29,7 +29,9 @@ Multiple CIDs may be specified to fetch multiple advertisements. Example Usage:
         -cid baguqeerazru3iegjkmjj45xfrheasxfxm4vwxotydl6mpt52zvnv5rx42ssq \
         /ip4/212.248.62.42/tcp/17162/p2p/12D3KooWCYL6mn3p7W5WoaC3yYfbsovaDkQcpyxMFG9PtJUmSjzF
 
-If no CID are specidied then CIDs are read from stdin, one per line.
+Note: The publisher's address info must be specified as the last argument.
+
+If no CIDs are specified then CIDs are read from stdin, one per line.
 
     cat cids.txt | advert /ip4/212.248.62.42/tcp/17162/p2p/12D3KooWCYL6mn3p7W5WoaC3yYfbsovaDkQcpyxMFG9PtJUmSjzF
 `,
