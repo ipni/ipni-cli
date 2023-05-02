@@ -8,6 +8,7 @@ import (
 	"github.com/ipni/go-libipni/find/client"
 	httpclient "github.com/ipni/go-libipni/find/client/http"
 	p2pclient "github.com/ipni/go-libipni/find/client/p2p"
+	"github.com/ipni/go-libipni/find/model"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/multiformats/go-multihash"
 	"github.com/urfave/cli/v2"
@@ -50,6 +51,10 @@ var findFlags = []cli.Flag{
 		Usage:    "Protocol to query the indexer (http, libp2p)",
 		Value:    "http",
 		Required: false,
+	},
+	&cli.BoolFlag{
+		Name:  "id-only",
+		Usage: "Only show provider's peer ID from each result",
 	},
 }
 
@@ -107,7 +112,12 @@ func findAction(cctx *cli.Context) error {
 		return fmt.Errorf("unrecognized protocol type for client interaction: %s", protocol)
 	}
 
-	resp, err := cl.FindBatch(cctx.Context, mhs)
+	var resp *model.FindResponse
+	if len(mhs) == 1 {
+		resp, err = cl.Find(cctx.Context, mhs[0])
+	} else {
+		resp, err = cl.FindBatch(cctx.Context, mhs)
+	}
 	if err != nil {
 		return err
 	}
@@ -117,13 +127,34 @@ func findAction(cctx *cli.Context) error {
 		return nil
 	}
 
-	fmt.Println("Content providers:")
+	if cctx.Bool("id-only") {
+		seen := make(map[peer.ID]struct{})
+		for i := range resp.MultihashResults {
+			for _, pr := range resp.MultihashResults[i].ProviderResults {
+				if _, ok := seen[pr.Provider.ID]; ok {
+					continue
+				}
+				seen[pr.Provider.ID] = struct{}{}
+				fmt.Println(pr.Provider.ID.String())
+			}
+		}
+		return nil
+	}
+
 	for i := range resp.MultihashResults {
-		fmt.Println("   Multihash:", resp.MultihashResults[i].Multihash.B58String(), "==>")
+		fmt.Println("Multihash:", resp.MultihashResults[i].Multihash.B58String())
+		// Group results by provider.
+		providers := make(map[string][]model.ProviderResult)
 		for _, pr := range resp.MultihashResults[i].ProviderResults {
-			fmt.Println("       Provider:", pr.Provider)
-			fmt.Println("       ContextID:", base64.StdEncoding.EncodeToString(pr.ContextID))
-			fmt.Println("       Metadata:", base64.StdEncoding.EncodeToString(pr.Metadata))
+			provStr := pr.Provider.String()
+			providers[provStr] = append(providers[provStr], pr)
+		}
+		for provStr, prs := range providers {
+			fmt.Println("  Provider:", provStr)
+			for _, pr := range prs {
+				fmt.Println("    ContextID:", base64.StdEncoding.EncodeToString(pr.ContextID))
+				fmt.Println("    Metadata:", base64.StdEncoding.EncodeToString(pr.Metadata))
+			}
 		}
 	}
 	return nil
