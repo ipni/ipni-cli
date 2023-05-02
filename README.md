@@ -48,7 +48,7 @@ ipni-cli find -i cid.contact --cid bafybeigvgzoolc3drupxhlevdp2ugqcrbcsqfmcek2zx
 
 See which providers cid.contact knows about that dev.cid.contact does not:
 ```sh 
-ipni-cli provider --all -i dev.cid.contact -id | ipni-cli provider -v -i cid.contact -id
+ipni-cli provider --all -i dev.cid.contact -id | ipni-cli provider -invert -i cid.contact -id
 ```
 
 To get ads from a list in a file:

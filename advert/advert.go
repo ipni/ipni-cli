@@ -12,6 +12,7 @@ import (
 	"github.com/ipfs/go-datastore"
 	"github.com/ipni/ipni-cli/internal/adpub"
 	"github.com/libp2p/go-libp2p/core/peer"
+	"github.com/mattn/go-isatty"
 	"github.com/urfave/cli/v2"
 )
 
@@ -107,6 +108,9 @@ func advertAction(cctx *cli.Context) error {
 
 	// If no CIDs specified, read from stdin.
 	if len(adCids) == 0 {
+		if isatty.IsTerminal(os.Stdin.Fd()) {
+			fmt.Fprintln(os.Stderr, "Reading advertisement CIDs from stdin. Enter one per line, or Ctrl-D to finish.")
+		}
 		seen := make(map[string]struct{})
 		scanner := bufio.NewScanner(os.Stdin)
 		for scanner.Scan() {
@@ -121,7 +125,7 @@ func advertAction(cctx *cli.Context) error {
 			}
 			cid, err := cid.Decode(cidStr)
 			if err != nil {
-				return fmt.Errorf("bad advertisement CID arqument: %w", err)
+				return fmt.Errorf("bad advertisement CID argument: %w", err)
 			}
 			adCids = append(adCids, cid)
 		}
