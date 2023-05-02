@@ -12,6 +12,7 @@ import (
 	client "github.com/ipni/go-libipni/find/client/http"
 	"github.com/ipni/go-libipni/find/model"
 	"github.com/libp2p/go-libp2p/core/peer"
+	"github.com/mattn/go-isatty"
 	"github.com/urfave/cli/v2"
 )
 
@@ -25,7 +26,7 @@ This can be used to filter out provideres from the returned list.
 Here is an example that shows using the output of one provider command to filter the output of
 another, to see which providers cid.contact knows about that dev.cid.contact does not:
 
-    provider --all -i dev.cid.contact -id | provider -v -i cid.contact -id
+    provider --all -i dev.cid.contact -id | provider -invert -i cid.contact -id
 `,
 	Flags:  providerFlags,
 	Action: providerAction,
@@ -55,9 +56,8 @@ var providerFlags = []cli.Flag{
 		Aliases: []string{"id"},
 	},
 	&cli.BoolFlag{
-		Name:    "invert",
-		Usage:   "Invert selection, show all providers except those specified",
-		Aliases: []string{"v"},
+		Name:  "invert",
+		Usage: "Invert selection, show all providers except those specified",
 	},
 }
 
@@ -71,6 +71,9 @@ func providerAction(cctx *cli.Context) error {
 
 	pids := cctx.StringSlice("pid")
 	if len(pids) == 0 {
+		if isatty.IsTerminal(os.Stdin.Fd()) {
+			fmt.Fprintln(os.Stderr, "Reading provider IDs from stdin. Enter one per line, or Ctrl-D to finish.")
+		}
 		// Read from stdin.
 		scanner := bufio.NewScanner(os.Stdin)
 		for scanner.Scan() {
