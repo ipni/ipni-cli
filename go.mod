@@ -11,6 +11,7 @@ require (
 	github.com/ipld/go-ipld-prime v0.20.0
 	github.com/ipni/go-libipni v0.0.7
 	github.com/libp2p/go-libp2p v0.27.1
+	github.com/mattn/go-isatty v0.0.18
 	github.com/montanaflynn/stats v0.7.0
 	github.com/multiformats/go-multiaddr v0.9.0
 	github.com/multiformats/go-multicodec v0.8.1
@@ -96,7 +97,6 @@ require (
 	github.com/libp2p/go-reuseport v0.2.0 // indirect
 	github.com/libp2p/go-yamux/v4 v4.0.0 // indirect
 	github.com/marten-seemann/tcp v0.0.0-20210406111302-dfbc87cc63fd // indirect
-	github.com/mattn/go-isatty v0.0.18 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.4 // indirect
 	github.com/miekg/dns v1.1.53 // indirect
 	github.com/mikioh/tcpinfo v0.0.0-20190314235526-30a79bb1804b // indirect
