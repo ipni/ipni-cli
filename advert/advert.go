@@ -135,6 +135,9 @@ func advertAction(cctx *cli.Context) error {
 	}
 
 	provClient, err := adpub.MakeClient(*addrInfo, cctx.String("topic"), cctx.Int64("entries-depth-limit"))
+	if err != nil {
+		return err
+	}
 
 	for _, adCid := range adCids {
 		ad, err := provClient.GetAdvertisement(cctx.Context, adCid)

@@ -368,10 +368,6 @@ func verifyIngestFromProvider(cctx *cli.Context, provID peer.ID) error {
 	return nil
 }
 
-func errOneMultihashSourceOnly(cctx *cli.Context) error {
-	return cli.Exit("Exactly one multihash source must be specified.", 1)
-}
-
 func verifyIngestFromCar(cctx *cli.Context, provID peer.ID, carPath string) error {
 	carPath = path.Clean(carPath)
 
@@ -482,8 +478,6 @@ func verifyIngestFromCarIterableIndex(cctx *cli.Context, find *httpfindclient.Cl
 	}
 	return verifyIngestFromMhs(cctx, find, provID, mhs)
 }
-
-const chunkSize = 4096
 
 type verifyResult struct {
 	TotalMhChecked   int
