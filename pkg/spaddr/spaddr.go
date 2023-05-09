@@ -4,7 +4,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/ipni/ipni-cli/spaddr/spinfo"
+	"github.com/ipni/ipni-cli/pkg/spaddr/spinfo"
 	"github.com/urfave/cli/v2"
 )
 

@@ -10,7 +10,7 @@ import (
 
 	"github.com/ipfs/go-cid"
 	"github.com/ipfs/go-datastore"
-	"github.com/ipni/ipni-cli/internal/adpub"
+	"github.com/ipni/ipni-cli/pkg/adpub"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/mattn/go-isatty"
 	"github.com/urfave/cli/v2"

@@ -5,7 +5,7 @@
 *.out
 
 bin/
-ipni-cli
+ipni
 
 *~
 *.car
