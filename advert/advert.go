@@ -19,29 +19,31 @@ import (
 var AdvertCmd = &cli.Command{
 	Name:  "advert",
 	Usage: "Show information about an advertisement from a specified publisher",
-	ArgsUsage: "The publisher's endpoint address in form of libp2p multiaddr info.\n" +
-		"       Example GraphSync: /ip4/1.2.3.4/tcp/1234/p2p/12D3KooWE8yt84RVwW3sFcd6WMjbUdWrZer2YtT4dmtj3dHdahSZ\n" +
-		"       Example HTTP:      /ip4/1.2.3.4/tcp/1234/http/12D3KooWE8yt84RVwW3sFcd6WMjbUdWrZer2YtT4dmtj3dHdahSZ",
 	Description: `Advertisement CIDs may be specified using the -cid flag, or --head to get the latest advertisement.
 Multiple CIDs may be specified to fetch multiple advertisements. Example Usage:
 
     advert
+		-ai /dns4/sp.example.com/tcp/17162/p2p/12D3KooWLjeDyvuv7rbfG2wWNvWn7ybmmU88PirmSckuqCgXBAph \
         -cid baguqeeradjagxlgpsy3xn2jrx52us5tl3mp5n5kq6kkg2ul3i6xzyrujbhbq \
-        -cid baguqeerazru3iegjkmjj45xfrheasxfxm4vwxotydl6mpt52zvnv5rx42ssq \
-        /ip4/212.248.62.42/tcp/17162/p2p/12D3KooWCYL6mn3p7W5WoaC3yYfbsovaDkQcpyxMFG9PtJUmSjzF
-
-Note: The publisher's address info must be specified as the last argument.
+        -cid baguqeerazru3iegjkmjj45xfrheasxfxm4vwxotydl6mpt52zvnv5rx42ssq
 
 If no CIDs are specified then CIDs are read from stdin, one per line.
 
-    cat cids.txt | advert /ip4/212.248.62.42/tcp/17162/p2p/12D3KooWCYL6mn3p7W5WoaC3yYfbsovaDkQcpyxMFG9PtJUmSjzF
+    cat cids.txt | advert -ai /dns4/sp.example.com/tcp/17162/p2p/12D3KooWLjeDyvuv7rbfG2wWNvWn7ybmmU88PirmSckuqCgXBAph
 `,
 	Flags:  advertFlags,
-	Before: beforeAdvert,
 	Action: advertAction,
 }
 
 var advertFlags = []cli.Flag{
+	&cli.StringFlag{
+		Name: "addr-info",
+		Usage: "Publisher's address info in form of libp2p multiaddr info.\n" +
+			"Example GraphSync: /ip4/1.2.3.4/tcp/1234/p2p/12D3KooWE8yt84RVwW3sFcd6WMjbUdWrZer2YtT4dmtj3dHdahSZ\n" +
+			"Example HTTP:      /ip4/1.2.3.4/tcp/1234/http/p2p/12D3KooWE8yt84RVwW3sFcd6WMjbUdWrZer2YtT4dmtj3dHdahSZ",
+		Aliases:  []string{"ai"},
+		Required: true,
+	},
 	&cli.StringSliceFlag{
 		Name:     "cid",
 		Usage:    "Specify advertisement CID to fetch, multiple OK",
@@ -71,15 +73,8 @@ var advertFlags = []cli.Flag{
 	},
 }
 
-func beforeAdvert(cctx *cli.Context) error {
-	if !cctx.Args().Present() {
-		return cli.Exit("The advertisement publisher address info must be specified as argument.", 1)
-	}
-	return nil
-}
-
 func advertAction(cctx *cli.Context) error {
-	addrInfo, err := peer.AddrInfoFromString(cctx.Args().First())
+	addrInfo, err := peer.AddrInfoFromString(cctx.String("addr-info"))
 	if err != nil {
 		return fmt.Errorf("bad pub-addr-info: %w", err)
 	}

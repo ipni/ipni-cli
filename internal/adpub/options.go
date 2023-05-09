@@ -21,7 +21,7 @@ func newOptions(o ...Option) (*options, error) {
 	opts := &options{
 		entriesRecurLimit: selector.RecursionLimitNone(),
 		topic:             "/indexer/ingest/mainnet",
-		maxSyncRetry:      10,
+		maxSyncRetry:      5,
 		syncRetryBackoff:  500 * time.Millisecond,
 	}
 	for _, apply := range o {

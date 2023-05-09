@@ -4,12 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 	"strings"
 	"time"
 
 	"github.com/ipfs/go-cid"
 	"github.com/ipfs/go-datastore"
-	logging "github.com/ipfs/go-log/v2"
 	"github.com/ipld/go-ipld-prime"
 	"github.com/ipld/go-ipld-prime/datamodel"
 	"github.com/ipld/go-ipld-prime/node/basicnode"
@@ -19,8 +19,6 @@ import (
 	"github.com/libp2p/go-libp2p"
 	"github.com/libp2p/go-libp2p/core/peer"
 )
-
-var log = logging.Logger("client")
 
 type Client interface {
 	GetAdvertisement(ctx context.Context, id cid.Cid) (*Advertisement, error)
@@ -142,12 +140,17 @@ func (c *client) syncAdWithRetry(ctx context.Context, adCid cid.Cid) (cid.Cid, e
 		if err == nil {
 			return adCid, nil
 		}
-		if attempt > c.maxSyncRetry {
-			log.Errorw("Reached maximum retry attempt while syncing ad", "cid", adCid, "attempt", attempt, "err", err)
-			return cid.Undef, err
-		}
 		attempt++
-		log.Infow("retrying ad sync", "attempt", attempt, "err", err)
+		if attempt > c.maxSyncRetry {
+			var adCidStr string
+			if adCid == cid.Undef {
+				adCidStr = "undef"
+			} else {
+				adCidStr = adCid.String()
+			}
+			return cid.Undef, fmt.Errorf("exceeded maximum retries syncing ad %s: %w", adCidStr, err)
+		}
+		fmt.Fprintf(os.Stderr, "ad sync retry %d: %s\n", attempt, err)
 		time.Sleep(c.syncRetryBackoff)
 	}
 }
@@ -162,22 +165,21 @@ func (c *client) syncEntriesWithRetry(ctx context.Context, id cid.Cid) (cid.Cid,
 			return id, nil
 		}
 		if strings.HasSuffix(err.Error(), "content not found") {
-			log.Warnw("Skipping entries sync; content no longer hosted", "cid", id, "err", err)
+			fmt.Fprintln(os.Stderr, "skipping entries sync; content no longer hosted:", err)
 			return cid.Undef, nil
 		}
+		attempt++
 		if attempt > c.maxSyncRetry {
-			log.Errorw("Reached maximum retry attempt while syncing entries", "cid", id, "attempt", attempt, "err", err)
-			return cid.Undef, err
+			return cid.Undef, fmt.Errorf("exceeded maximum retries syncing entries: %w", err)
 		}
 		nextMissing, visitedDepth, present := c.findNextMissingChunkLink(ctx, id)
 		if !present {
 			return id, nil
 		}
 		id = nextMissing
-		attempt++
 		remainingLimit := recurLimit.Depth() - visitedDepth
 		recurLimit = selector.RecursionLimitDepth(remainingLimit)
-		log.Infow("Retrying entries sync", "recurLimit", remainingLimit, "attempt", attempt, "err", err)
+		fmt.Fprintf(os.Stderr, "entries sync retry %d: %s\n", attempt, err)
 		time.Sleep(c.syncRetryBackoff)
 	}
 }
