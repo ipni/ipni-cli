@@ -9,51 +9,51 @@ This project provides a command line utility to access IPNI indexers and index-p
 ## Install
 
 ```sh
-go install github.com/ipni/ipni-cli@latest
+go install github.com/ipni/ipni-cli/cmd/ipni@latest
 ```
 
-This will install the ipni-cli commands into `$GOPATH/bin/`
+This will install the `ipni` command into `$GOPATH/bin/`
 
 ## Run
 
 To see instructions for use, run:
 ```
-ipni-cli --help
+ipni --help
 ```
 
 ## Examples
 
 Show the latest advertisement from a publisher:
 ```sh
-ipni-cli advert --head /dns4/ipni-ads.example.com/tcp/443/https/p2p/12D3KooWQ9j3Ur5V9U63Vi6ved72TcA3sv34k74W3wpW5rwNvDc3
+ipni advert --head /dns4/ipni-ads.example.com/tcp/443/https/p2p/12D3KooWQ9j3Ur5V9U63Vi6ved72TcA3sv34k74W3wpW5rwNvDc3
 ```
 
 Ask cid.contact where to find CID `bafybeigvgzoolc3drupxhlevdp2ugqcrbcsqfmcek2zxiw5wctk3xjpjwy`:
 ```sh
-ipni-cli find -i cid.contact --cid bafybeigvgzoolc3drupxhlevdp2ugqcrbcsqfmcek2zxiw5wctk3xjpjwy
+ipni find -i cid.contact --cid bafybeigvgzoolc3drupxhlevdp2ugqcrbcsqfmcek2zxiw5wctk3xjpjwy
 ```
 
 Get information about the provider with ID `QmQzqxhK82kAmKvARFZSkUVS6fo9sySaiogAnx5EnZ6ZmC`
 ```
-ipni-cli provider -i cid.contact -pid QmQzqxhK82kAmKvARFZSkUVS6fo9sySaiogAnx5EnZ6ZmC
+ipni provider -i cid.contact -pid QmQzqxhK82kAmKvARFZSkUVS6fo9sySaiogAnx5EnZ6ZmC
 ```
 ```
-echo QmQzqxhK82kAmKvARFZSkUVS6fo9sySaiogAnx5EnZ6ZmC | ipni-cli provider -i cid.contact
+echo QmQzqxhK82kAmKvARFZSkUVS6fo9sySaiogAnx5EnZ6ZmC | ipni provider -i cid.contact
 ```
 
 Get information about the providers returned from find results:
 ```sh
-ipni-cli find -i cid.contact --cid bafybeigvgzoolc3drupxhlevdp2ugqcrbcsqfmcek2zxiw5wctk3xjpjwy --id-only | ipni-cli provider -i cid.contact
+ipni find -i cid.contact --cid bafybeigvgzoolc3drupxhlevdp2ugqcrbcsqfmcek2zxiw5wctk3xjpjwy --id-only | ipni provider -i cid.contact
 ```
 
 See which providers cid.contact knows about that dev.cid.contact does not:
 ```sh 
-ipni-cli provider --all -i dev.cid.contact -id | ipni-cli provider -invert -i cid.contact -id
+ipni provider --all -i dev.cid.contact -id | ipni provider -invert -i cid.contact -id
 ```
 
 To get ads from a list in a file:
 ```sh
-cat ad-cids-list.txt | ipni-cli advert /dns4/ads.example.com/tcp/24001/p2p/12D3KooWLjeDyvuv7rbfG2wWNvWn7ybmmU88PirmSckuqCgXBAph
+cat ad-cids-list.txt | ipni advert /dns4/ads.example.com/tcp/24001/p2p/12D3KooWLjeDyvuv7rbfG2wWNvWn7ybmmU88PirmSckuqCgXBAph
 ```
 
 ## License

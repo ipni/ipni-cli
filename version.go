@@ -1,4 +1,4 @@
-package main
+package version
 
 import (
 	_ "embed"
@@ -6,7 +6,14 @@ import (
 	"runtime/debug"
 )
 
-var version string
+var (
+	// Release is the release version tag value, e.g. "v1.2.3"
+	Release string
+	// Revision is the git commit hash.
+	Revision string
+	// Version is the full version string: Release-Revision.
+	Version string
+)
 
 //go:embed version.json
 var versionJSON []byte
@@ -15,7 +22,7 @@ func init() {
 	// Read version from embedded JSON file.
 	var verMap map[string]string
 	json.Unmarshal(versionJSON, &verMap)
-	version = verMap["version"]
+	Release = verMap["version"]
 
 	// If running from a module, try to get the build info.
 	bi, ok := debug.ReadBuildInfo()
@@ -26,7 +33,8 @@ func init() {
 	// Append the revision to the version.
 	for i := range bi.Settings {
 		if bi.Settings[i].Key == "vcs.revision" {
-			version += "-" + bi.Settings[i].Value
+			Revision = bi.Settings[i].Value
+			Version = Release + "-" + Revision
 			break
 		}
 	}

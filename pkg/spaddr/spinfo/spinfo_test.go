@@ -5,7 +5,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/ipni/ipni-cli/spaddr/spinfo"
+	"github.com/ipni/ipni-cli/pkg/spaddr/spinfo"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/stretchr/testify/require"
 )
