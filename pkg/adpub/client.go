@@ -12,8 +12,10 @@ import (
 	"github.com/ipfs/go-datastore"
 	"github.com/ipld/go-ipld-prime"
 	"github.com/ipld/go-ipld-prime/datamodel"
+	cidlink "github.com/ipld/go-ipld-prime/linking/cid"
 	"github.com/ipld/go-ipld-prime/node/basicnode"
 	"github.com/ipld/go-ipld-prime/traversal/selector"
+	"github.com/ipld/go-ipld-prime/traversal/selector/builder"
 	selectorbuilder "github.com/ipld/go-ipld-prime/traversal/selector/builder"
 	"github.com/ipni/go-libipni/dagsync"
 	"github.com/libp2p/go-libp2p"
@@ -21,8 +23,9 @@ import (
 )
 
 type Client interface {
-	GetAdvertisement(ctx context.Context, id cid.Cid) (*Advertisement, error)
+	GetAdvertisement(context.Context, cid.Cid) (*Advertisement, error)
 	Close() error
+	Distance(context.Context, cid.Cid, cid.Cid) (int, error)
 }
 
 type client struct {
@@ -96,6 +99,50 @@ func selectEntriesWithLimit(limit selector.RecursionLimit) datamodel.Node {
 		func(efsb selectorbuilder.ExploreFieldsSpecBuilder) {
 			efsb.Insert("Next", ssb.ExploreRecursiveEdge())
 		})).Node()
+}
+
+// recursionLimit returns the recursion limit for the given depth.
+func recursionLimit(depth int) selector.RecursionLimit {
+	if depth < 1 {
+		return selector.RecursionLimitNone()
+	}
+	return selector.RecursionLimitDepth(int64(depth))
+}
+
+func (c *client) Distance(ctx context.Context, oldestCid, newestCid cid.Cid) (int, error) {
+	if oldestCid == cid.Undef {
+		return 0, errors.New("must specify a oldest CID")
+	}
+	// Sync the advertisement without entries first.
+	var err error
+	_, err = c.syncAdWithRetry(ctx, oldestCid)
+	if err != nil {
+		return 0, err
+	}
+
+	// Load the synced advertisement from local store.
+	ad, err := c.store.getAdvertisement(ctx, oldestCid)
+	if err != nil {
+		return 0, err
+	}
+
+	rLimit := recursionLimit(0)
+	stopAt := cidlink.Link{Cid: ad.PreviousID}
+
+	ssb := builder.NewSelectorSpecBuilder(basicnode.Prototype.Any)
+	adSeqSel := ssb.ExploreFields(
+		func(efsb builder.ExploreFieldsSpecBuilder) {
+			efsb.Insert("PreviousID", ssb.ExploreRecursiveEdge())
+		}).Node()
+
+	sel := dagsync.ExploreRecursiveWithStopNode(rLimit, adSeqSel, stopAt)
+
+	newestCid, err = c.sub.Sync(ctx, c.publisher, newestCid, sel)
+	if err != nil {
+		return 0, err
+	}
+
+	return c.store.distance(ctx, oldestCid, newestCid)
 }
 
 func (c *client) GetAdvertisement(ctx context.Context, adCid cid.Cid) (*Advertisement, error) {

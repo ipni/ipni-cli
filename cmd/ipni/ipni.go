@@ -6,6 +6,7 @@ import (
 
 	version "github.com/ipni/ipni-cli"
 	"github.com/ipni/ipni-cli/pkg/advert"
+	"github.com/ipni/ipni-cli/pkg/distance"
 	"github.com/ipni/ipni-cli/pkg/find"
 	"github.com/ipni/ipni-cli/pkg/provider"
 	"github.com/ipni/ipni-cli/pkg/spaddr"
@@ -20,6 +21,7 @@ func main() {
 		Version: version.Version,
 		Commands: []*cli.Command{
 			advert.AdvertCmd,
+			distance.DistanceCmd,
 			find.FindCmd,
 			provider.ProviderCmd,
 			spaddr.SPAddrCmd,
