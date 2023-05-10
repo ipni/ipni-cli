@@ -16,7 +16,6 @@ import (
 	"github.com/ipld/go-ipld-prime/node/basicnode"
 	"github.com/ipld/go-ipld-prime/traversal/selector"
 	"github.com/ipld/go-ipld-prime/traversal/selector/builder"
-	selectorbuilder "github.com/ipld/go-ipld-prime/traversal/selector/builder"
 	"github.com/ipni/go-libipni/dagsync"
 	"github.com/libp2p/go-libp2p"
 	"github.com/libp2p/go-libp2p/core/peer"
@@ -77,9 +76,9 @@ func NewClient(provAddr peer.AddrInfo, o ...Option) (Client, error) {
 		return nil, err
 	}
 
-	ssb := selectorbuilder.NewSelectorSpecBuilder(basicnode.Prototype.Any)
+	ssb := builder.NewSelectorSpecBuilder(basicnode.Prototype.Any)
 	adSel := ssb.ExploreRecursive(selector.RecursionLimitDepth(1), ssb.ExploreFields(
-		func(efsb selectorbuilder.ExploreFieldsSpecBuilder) {
+		func(efsb builder.ExploreFieldsSpecBuilder) {
 			efsb.Insert("PreviousID", ssb.ExploreRecursiveEdge())
 		})).Node()
 
@@ -94,9 +93,9 @@ func NewClient(provAddr peer.AddrInfo, o ...Option) (Client, error) {
 }
 
 func selectEntriesWithLimit(limit selector.RecursionLimit) datamodel.Node {
-	ssb := selectorbuilder.NewSelectorSpecBuilder(basicnode.Prototype.Any)
+	ssb := builder.NewSelectorSpecBuilder(basicnode.Prototype.Any)
 	return ssb.ExploreRecursive(limit, ssb.ExploreFields(
-		func(efsb selectorbuilder.ExploreFieldsSpecBuilder) {
+		func(efsb builder.ExploreFieldsSpecBuilder) {
 			efsb.Insert("Next", ssb.ExploreRecursiveEdge())
 		})).Node()
 }
