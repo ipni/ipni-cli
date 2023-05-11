@@ -58,7 +58,7 @@ func distanceAction(cctx *cli.Context) error {
 	if err != nil {
 		return fmt.Errorf("bad old cid: %w", err)
 	}
-	provClient, err := adpub.MakeClient(*addrInfo, cctx.String("topic"), 0)
+	provClient, err := adpub.NewClient(*addrInfo, adpub.WithTopicName(cctx.String("topic")))
 	if err != nil {
 		return err
 	}

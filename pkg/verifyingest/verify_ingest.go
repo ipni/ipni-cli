@@ -292,7 +292,9 @@ func verifyIngestFromProvider(cctx *cli.Context, provID peer.ID) error {
 	fmt.Println("Topic:", cctx.String("topic"))
 	fmt.Println("Last ad seen by indexer:", provInfo.LastAdvertisement.String())
 
-	pubClient, err := adpub.MakeClient(pubAddrInfo, cctx.String("topic"), cctx.Int64("entries-depth-limit"))
+	pubClient, err := adpub.NewClient(pubAddrInfo,
+		adpub.WithTopicName(cctx.String("topic")),
+		adpub.WithEntriesDepthLimit(cctx.Int64("entries-depth-limit")))
 	if err != nil {
 		return err
 	}
@@ -331,6 +333,11 @@ func verifyIngestFromProvider(cctx *cli.Context, provID peer.ID) error {
 		} else if !ad.HasEntries() {
 			fmt.Println("Has no entries; skipping verification.")
 		} else {
+			err = pubClient.SyncEntriesWithRetry(cctx.Context, ad.Entries.Root())
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "⚠️ Failed to sync entries for advertisement %s: %s\n", ad.ID, err)
+			}
+
 			var entriesOutput string
 			if ads.PartiallySynced {
 				entriesOutput = "; ad entries are partially synced due to: " + ads.SyncErr.Error()

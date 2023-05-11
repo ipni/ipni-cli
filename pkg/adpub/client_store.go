@@ -3,9 +3,7 @@ package adpub
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"io"
-	"os"
 
 	"github.com/ipfs/go-cid"
 	"github.com/ipfs/go-datastore"
@@ -192,18 +190,12 @@ func (s *ClientStore) distance(ctx context.Context, oldestCid, newestCid cid.Cid
 		}
 
 		count++
-		// Every 1024 ads, print a dot.
-		if count&1023 == 0 {
-			fmt.Fprintf(os.Stderr, ".")
-		}
 
 		if ad.PreviousID == nil {
 			break
 		}
 		newestCid = ad.PreviousID.(cidlink.Link).Cid
 	}
-	fmt.Fprintln(os.Stderr, "")
-
 	return count, nil
 }
 

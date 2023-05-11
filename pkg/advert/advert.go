@@ -129,13 +129,15 @@ func advertAction(cctx *cli.Context) error {
 		}
 	}
 
-	provClient, err := adpub.MakeClient(*addrInfo, cctx.String("topic"), cctx.Int64("entries-depth-limit"))
+	pubClient, err := adpub.NewClient(*addrInfo,
+		adpub.WithTopicName(cctx.String("topic")),
+		adpub.WithEntriesDepthLimit(cctx.Int64("entries-depth-limit")))
 	if err != nil {
 		return err
 	}
 
 	for _, adCid := range adCids {
-		ad, err := provClient.GetAdvertisement(cctx.Context, adCid)
+		ad, err := pubClient.GetAdvertisement(cctx.Context, adCid)
 		if err != nil {
 			if ad == nil {
 				return err
@@ -175,8 +177,20 @@ func advertAction(cctx *cli.Context) error {
 			} else {
 				fmt.Println("Entries: None")
 			}
+
 			return nil
 		}
+
+		// Sync entries if not a removal advertisement and has entries.
+		if ad.HasEntries() {
+			err = pubClient.SyncEntriesWithRetry(cctx.Context, ad.Entries.Root())
+			if err != nil {
+				if !errors.Is(err, adpub.ErrContentNotFound) {
+					fmt.Fprintf(os.Stderr, "⚠️ Failed to sync entries for advertisement %s. Content no longer hosted\n", ad.ID)
+				}
+			}
+		}
+
 		fmt.Println("Entries:")
 		var entriesOutput string
 		entries, err := ad.Entries.Drain()
