@@ -25,41 +25,28 @@ type Client interface {
 	GetAdvertisement(context.Context, cid.Cid) (*Advertisement, error)
 	Close() error
 	Distance(context.Context, cid.Cid, cid.Cid) (int, error)
+	SyncEntriesWithRetry(context.Context, cid.Cid) error
 }
 
 type client struct {
-	*options
+	entriesDepthLimit selector.RecursionLimit
+	maxSyncRetry      uint64
+	syncRetryBackoff  time.Duration
+
 	sub *dagsync.Subscriber
 
 	store     *ClientStore
 	publisher peer.AddrInfo
 
+	// adSel is the selector for a single advertisement.
 	adSel ipld.Node
-
-	removed map[string]struct{}
 }
 
-func MakeClient(addrInfo peer.AddrInfo, topic string, entriesDepth int64) (Client, error) {
-	if topic == "" {
-		return nil, errors.New("topic must be configured when graphsync endpoint is specified")
-	}
+var ErrContentNotFound = errors.New("content not found at publisher")
 
-	if entriesDepth < 0 {
-		return nil, fmt.Errorf("ad entries recursion depth limit cannot be less than zero; got %d", entriesDepth)
-	}
-
-	var entRecurLim selector.RecursionLimit
-	if entriesDepth == 0 {
-		entRecurLim = selector.RecursionLimitNone()
-	} else {
-		entRecurLim = selector.RecursionLimitDepth(entriesDepth)
-	}
-
-	return NewClient(addrInfo, WithTopicName(topic), WithEntriesRecursionLimit(entRecurLim))
-}
-
-func NewClient(provAddr peer.AddrInfo, o ...Option) (Client, error) {
-	opts, err := newOptions(o...)
+// NewClient creates a new client for a content advertisement publisher.
+func NewClient(addrInfo peer.AddrInfo, options ...Option) (Client, error) {
+	opts, err := getOpts(options)
 	if err != nil {
 		return nil, err
 	}
@@ -68,7 +55,7 @@ func NewClient(provAddr peer.AddrInfo, o ...Option) (Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	h.Peerstore().AddAddrs(provAddr.ID, provAddr.Addrs, time.Hour)
+	h.Peerstore().AddAddrs(addrInfo.ID, addrInfo.Addrs, time.Hour)
 
 	store := newClientStore()
 	sub, err := dagsync.NewSubscriber(h, store.Batching, store.LinkSystem, opts.topic, nil)
@@ -83,12 +70,14 @@ func NewClient(provAddr peer.AddrInfo, o ...Option) (Client, error) {
 		})).Node()
 
 	return &client{
-		options:   opts,
+		entriesDepthLimit: opts.entriesDepthLimit,
+		maxSyncRetry:      opts.maxSyncRetry,
+		syncRetryBackoff:  opts.syncRetryBackoff,
+
 		sub:       sub,
-		publisher: provAddr,
+		publisher: addrInfo,
 		store:     store,
 		adSel:     adSel,
-		removed:   make(map[string]struct{}),
 	}, nil
 }
 
@@ -98,14 +87,6 @@ func selectEntriesWithLimit(limit selector.RecursionLimit) datamodel.Node {
 		func(efsb builder.ExploreFieldsSpecBuilder) {
 			efsb.Insert("Next", ssb.ExploreRecursiveEdge())
 		})).Node()
-}
-
-// recursionLimit returns the recursion limit for the given depth.
-func recursionLimit(depth int) selector.RecursionLimit {
-	if depth < 1 {
-		return selector.RecursionLimitNone()
-	}
-	return selector.RecursionLimitDepth(int64(depth))
 }
 
 func (c *client) Distance(ctx context.Context, oldestCid, newestCid cid.Cid) (int, error) {
@@ -125,7 +106,9 @@ func (c *client) Distance(ctx context.Context, oldestCid, newestCid cid.Cid) (in
 		return 0, err
 	}
 
-	rLimit := recursionLimit(0)
+	// TODO: Allow a maximum depth to be specified for the ad chain.
+	rLimit := selector.RecursionLimitNone()
+
 	stopAt := cidlink.Link{Cid: ad.PreviousID}
 
 	ssb := builder.NewSelectorSpecBuilder(basicnode.Prototype.Any)
@@ -158,20 +141,8 @@ func (c *client) GetAdvertisement(ctx context.Context, adCid cid.Cid) (*Advertis
 		return nil, err
 	}
 
-	ctxIDStr := string(ad.ContextID)
 	if ad.IsRemove {
-		c.removed[ctxIDStr] = struct{}{}
 		return ad, nil
-	}
-
-	if _, ok := c.removed[ctxIDStr]; ok {
-		ad.Entries = nil
-		return ad, nil
-	}
-
-	// Only sync its entries recursively if it is not a removal advertisement and has entries.
-	if ad.HasEntries() {
-		_, err = c.syncEntriesWithRetry(ctx, ad.Entries.root)
 	}
 
 	// Return the partially synced advertisement useful for output to client.
@@ -201,26 +172,27 @@ func (c *client) syncAdWithRetry(ctx context.Context, adCid cid.Cid) (cid.Cid, e
 	}
 }
 
-func (c *client) syncEntriesWithRetry(ctx context.Context, id cid.Cid) (cid.Cid, error) {
+func (c *client) SyncEntriesWithRetry(ctx context.Context, id cid.Cid) error {
 	var attempt uint64
-	recurLimit := c.entriesRecurLimit
+	recurLimit := c.entriesDepthLimit
 	for {
 		sel := selectEntriesWithLimit(recurLimit)
 		_, err := c.sub.Sync(ctx, c.publisher, id, sel)
 		if err == nil {
-			return id, nil
+			// Synced everything asked for by the selector.
+			return nil
 		}
 		if strings.HasSuffix(err.Error(), "content not found") {
-			fmt.Fprintln(os.Stderr, "skipping entries sync; content no longer hosted:", err)
-			return cid.Undef, nil
+			return ErrContentNotFound
 		}
 		attempt++
 		if attempt > c.maxSyncRetry {
-			return cid.Undef, fmt.Errorf("exceeded maximum retries syncing entries: %w", err)
+			return fmt.Errorf("exceeded maximum retries syncing entries: %w", err)
 		}
 		nextMissing, visitedDepth, present := c.findNextMissingChunkLink(ctx, id)
 		if !present {
-			return id, nil
+			// Reached the end of the chain.
+			return nil
 		}
 		id = nextMissing
 		remainingLimit := recurLimit.Depth() - visitedDepth
