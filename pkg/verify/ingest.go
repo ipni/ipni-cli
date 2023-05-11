@@ -1,4 +1,4 @@
-package verifyingest
+package verify
 
 import (
 	"errors"
@@ -30,8 +30,8 @@ var (
 	printUnindexedMhs bool
 )
 
-var VerifyIngestCmd = &cli.Command{
-	Name: "verify-ingest",
+var verifyIngestSubCmd = &cli.Command{
+	Name: "ingest",
 	Usage: "Verifies an indexer's ingestion of multihashes. " +
 		"Multihashes can be read from a publisher, from a CAR file, or from a CARv2 Index",
 	Description: `This command verifies whether a list of multihashes are ingested by an indexer and have the 
@@ -65,20 +65,20 @@ Example usage:
 
 * Verify ingest from provider's GraphSync publisher endpoint for a specific advertisement CID,
   selecting 50% of available multihashes using deterministic random number generator, seeded with '1413':
-	./verifyingest --provider-id 12D3KooWE8yt84RVwW3sFcd6WMjbUdWrZer2YtT4dmtj3dHdahSZ \
+	./verify ingest --provider-id 12D3KooWE8yt84RVwW3sFcd6WMjbUdWrZer2YtT4dmtj3dHdahSZ \
 		--indexer https://cid.contact \
 		--ad-cid baguqeeqqcbuegh2hzk7sukqpsz24wg3tk4 \
 		--sampling-prob 0.5 --rng-seed 1413
 
 * Verify ingestion from CAR file, selecting 50% of available multihashes using a deterministic 
   random number generator, seeded with '1413':
-	./verifyingest --provider-id 12D3KooWE8yt84RVwW3sFcd6WMjbUdWrZer2YtT4dmtj3dHdahSZ \
+	./verify ingest --provider-id 12D3KooWE8yt84RVwW3sFcd6WMjbUdWrZer2YtT4dmtj3dHdahSZ \
 		--from-car my-dag.car \
 		--indexer 192.168.2.100:3000 \
 		--sampling-prob 0.5 --rng-seed 1413
 
 * Verify ingestion from CARv2 index file using all available multihashes:
-	./verifyingest --provider-id 12D3KooWE8yt84RVwW3sFcd6WMjbUdWrZer2YtT4dmtj3dHdahSZ \
+	./verify ingest --provider-id 12D3KooWE8yt84RVwW3sFcd6WMjbUdWrZer2YtT4dmtj3dHdahSZ \
 		--from-car my-idx.idx \
 		--indexer 192.168.2.100:3000
 

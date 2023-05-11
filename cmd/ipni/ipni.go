@@ -10,7 +10,7 @@ import (
 	"github.com/ipni/ipni-cli/pkg/find"
 	"github.com/ipni/ipni-cli/pkg/provider"
 	"github.com/ipni/ipni-cli/pkg/spaddr"
-	"github.com/ipni/ipni-cli/pkg/verifyingest"
+	"github.com/ipni/ipni-cli/pkg/verify"
 	"github.com/urfave/cli/v2"
 )
 
@@ -25,7 +25,7 @@ func main() {
 			find.FindCmd,
 			provider.ProviderCmd,
 			spaddr.SPAddrCmd,
-			verifyingest.VerifyIngestCmd,
+			verify.VerifyCmd,
 		},
 	}
 

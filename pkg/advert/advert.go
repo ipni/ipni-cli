@@ -91,7 +91,7 @@ func advertAction(cctx *cli.Context) error {
 			}
 			cid, err := cid.Decode(cidStr)
 			if err != nil {
-				return fmt.Errorf("bad advertisement CID arqument: %w", err)
+				return fmt.Errorf("bad advertisement CID: %w", err)
 			}
 			adCids = append(adCids, cid)
 		}
@@ -120,7 +120,7 @@ func advertAction(cctx *cli.Context) error {
 			}
 			cid, err := cid.Decode(cidStr)
 			if err != nil {
-				return fmt.Errorf("bad advertisement CID argument: %w", err)
+				return fmt.Errorf("bad advertisement CID: %w", err)
 			}
 			adCids = append(adCids, cid)
 		}
@@ -168,6 +168,21 @@ func advertAction(cctx *cli.Context) error {
 			}
 		} else {
 			fmt.Println("   None")
+		}
+		fmt.Print("Signature: ")
+		if ad.SigErr != nil {
+			fmt.Println("❌ invalid:", ad.SigErr)
+		} else {
+			fmt.Println("✅ valid")
+			fmt.Print("Signed by: ")
+			switch ad.SignerID {
+			case ad.ProviderID:
+				fmt.Println("content provider")
+			case addrInfo.ID:
+				fmt.Println("advertisement publisher")
+			default:
+				fmt.Println("⚠️  Unknown:", ad.SignerID)
+			}
 		}
 
 		if ad.IsRemove {
