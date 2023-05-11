@@ -12,7 +12,7 @@ import (
 var DistanceCmd = &cli.Command{
 	Name:        "distance",
 	Usage:       "Determine the distance between two advertisements in a chain",
-	Description: "Sepcify the oldest and newest advertisement CIDs. If newest is not specified use the latest advertisement",
+	Description: "Sepcify the start and optional end advertisement CIDs. If end CID is not specified use the latest advertisement",
 	Flags:       distanceFlags,
 	Action:      distanceAction,
 }
@@ -27,13 +27,13 @@ var distanceFlags = []cli.Flag{
 		Required: true,
 	},
 	&cli.StringFlag{
-		Name:     "old",
+		Name:     "start",
 		Usage:    "CID of earliest advertisement in chain",
 		Required: true,
 	},
 	&cli.StringFlag{
-		Name:  "new",
-		Usage: "CID of latest advertisement in chain. If not specified, use the latest advertisement",
+		Name:  "end",
+		Usage: "CID of advertisement later in chain. If not specified, use the latest advertisement",
 	},
 	&cli.BoolFlag{
 		Name:    "quiet",
@@ -54,28 +54,28 @@ func distanceAction(cctx *cli.Context) error {
 		return fmt.Errorf("bad pub-addr-info: %w", err)
 	}
 
-	oldCid, err := cid.Decode(cctx.String("old"))
+	startCid, err := cid.Decode(cctx.String("start"))
 	if err != nil {
-		return fmt.Errorf("bad old cid: %w", err)
+		return fmt.Errorf("bad start cid: %w", err)
 	}
 	provClient, err := adpub.NewClient(*addrInfo, adpub.WithTopicName(cctx.String("topic")))
 	if err != nil {
 		return err
 	}
 
-	var newStr string
-	var newCid cid.Cid
-	if cctx.String("new") != "" {
-		newCid, err := cid.Decode(cctx.String("new"))
+	var endStr string
+	var endCid cid.Cid
+	if cctx.String("end") != "" {
+		endCid, err = cid.Decode(cctx.String("end"))
 		if err != nil {
-			return fmt.Errorf("bad new for: %w", err)
+			return fmt.Errorf("bad end cid: %w", err)
 		}
-		newStr = newCid.String()
+		endStr = endCid.String()
 	} else {
-		newStr = "head"
+		endStr = "head"
 	}
 
-	adCount, err := provClient.Distance(cctx.Context, oldCid, newCid)
+	adCount, err := provClient.Distance(cctx.Context, startCid, endCid)
 	if err != nil {
 		return err
 	}
@@ -83,7 +83,7 @@ func distanceAction(cctx *cli.Context) error {
 	if cctx.Bool("quiet") {
 		fmt.Println(adCount)
 	} else {
-		fmt.Printf("Distance from %s to %s is %d\n", oldCid, newStr, adCount)
+		fmt.Printf("Distance from %s to %s is %d\n", startCid, endStr, adCount)
 	}
 	return nil
 }
