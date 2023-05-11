@@ -8,9 +8,11 @@ import (
 	"os"
 	"strings"
 
+	"github.com/ipfs/go-cid"
 	"github.com/ipni/go-libipni/apierror"
 	client "github.com/ipni/go-libipni/find/client/http"
 	"github.com/ipni/go-libipni/find/model"
+	"github.com/ipni/ipni-cli/pkg/adpub"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/mattn/go-isatty"
 	"github.com/urfave/cli/v2"
@@ -54,6 +56,10 @@ var providerFlags = []cli.Flag{
 		Name:    "id-only",
 		Usage:   "Only show provider's peer ID",
 		Aliases: []string{"id"},
+	},
+	&cli.BoolFlag{
+		Name:  "distance",
+		Usage: "Calculate distance from last seen advertisement to provider's current head advertisement",
 	},
 	&cli.BoolFlag{
 		Name:  "invert",
@@ -145,7 +151,7 @@ func getProvider(cctx *cli.Context, cl *client.Client, peerID peer.ID) error {
 		return nil
 	}
 
-	showProviderInfo(prov)
+	showProviderInfo(cctx, prov)
 	return nil
 }
 
@@ -185,13 +191,13 @@ func listProviders(cctx *cli.Context, peerIDs []peer.ID) error {
 		if _, ok := exclude[pinfo.AddrInfo.ID]; ok {
 			continue
 		}
-		showProviderInfo(pinfo)
+		showProviderInfo(cctx, pinfo)
 	}
 
 	return nil
 }
 
-func showProviderInfo(pinfo *model.ProviderInfo) {
+func showProviderInfo(cctx *cli.Context, pinfo *model.ProviderInfo) {
 	fmt.Println("Provider", pinfo.AddrInfo.ID)
 	fmt.Println("    Addresses:", pinfo.AddrInfo.Addrs)
 	var adCidStr string
@@ -222,4 +228,28 @@ func showProviderInfo(pinfo *model.ProviderInfo) {
 	if pinfo.Inactive {
 		fmt.Println("    Inactive: true")
 	}
+
+	if cctx.Bool("distance") {
+		fmt.Print("    Distance to head advertisement: ")
+		dist, err := getLastSeenDistance(cctx, pinfo)
+		if err != nil {
+			fmt.Println("error:", err)
+		} else {
+			fmt.Println(dist)
+		}
+	}
+}
+
+func getLastSeenDistance(cctx *cli.Context, pinfo *model.ProviderInfo) (int, error) {
+	if pinfo.Publisher == nil {
+		return 0, errors.New("no publisher listed")
+	}
+	if !pinfo.LastAdvertisement.Defined() {
+		return 0, errors.New("no last advertisement")
+	}
+	pubClient, err := adpub.NewClient(*pinfo.Publisher)
+	if err != nil {
+		return 0, err
+	}
+	return pubClient.Distance(cctx.Context, pinfo.LastAdvertisement, cid.Undef)
 }
