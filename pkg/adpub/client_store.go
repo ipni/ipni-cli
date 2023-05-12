@@ -39,7 +39,7 @@ type Advertisement struct {
 	ExtendedProvider *schema.ExtendedProvider
 	// SigErr is the signature validation error. Nil if signature is valid.
 	SigErr error
-	// SignerID is the peer.ID of the of the signer
+	// SignerID is the peer.ID of the of the signer.
 	SignerID peer.ID
 }
 

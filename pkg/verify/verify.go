@@ -6,7 +6,7 @@ import (
 
 var VerifyCmd = &cli.Command{
 	Name:  "verify",
-	Usage: "Verifies advertised content validity and queribility from an indexer",
+	Usage: "Verifies advertised content validity and queryability from an indexer",
 	Subcommands: []*cli.Command{
 		verifyIngestSubCmd,
 	},
