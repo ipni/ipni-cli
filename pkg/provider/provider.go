@@ -19,14 +19,13 @@ import (
 )
 
 var ProviderCmd = &cli.Command{
-	Name: "provider",
-	Usage: "Show information about one or more providers known to an indexer. " +
-		"Reads provider IDs from stdin if none are specified.",
-	Description: `The -v flag inverts the selection of providers, and shows all that are not specified.
-This can be used to filter out provideres from the returned list.
+	Name:  "provider",
+	Usage: "Show information about providers known to an indexer.",
+	Description: `Get information about one or more providers from the specified indexer. An optional --distance flag will calculate the distance from the last seen advertisement to the provider's current head advertisement.
 
-Here is an example that shows using the output of one provider command to filter the output of
-another, to see which providers cid.contact knows about that dev.cid.contact does not:
+The --invert flag inverts the selection of providers, and shows all that are not specified. This can be used to filter out provideres from the returned list.
+
+Here is an example that shows using the output of one provider command to filter the output of another, to see which providers cid.contact knows about that dev.cid.contact does not:
 
     provider --all -i dev.cid.contact -id | provider -invert -i cid.contact -id
 `,
@@ -43,9 +42,8 @@ var providerFlags = []cli.Flag{
 		Value:   "http://localhost:3000",
 	},
 	&cli.StringSliceFlag{
-		Name:    "pid",
-		Usage:   "Provider's peer ID, multiple allowed",
-		Aliases: []string{"p"},
+		Name:  "pid",
+		Usage: "Provider's peer ID, multiple allowed. Reads IDs from stdin if none are specified.",
 	},
 	&cli.BoolFlag{
 		Name:    "all",
@@ -63,7 +61,7 @@ var providerFlags = []cli.Flag{
 	},
 	&cli.BoolFlag{
 		Name:  "invert",
-		Usage: "Invert selection, show all providers except those specified",
+		Usage: "Invert selection to show all providers except those specified",
 	},
 }
 

@@ -26,7 +26,7 @@ type ClientStore struct {
 	ipld.LinkSystem
 }
 
-// TODO: replace Advertisement type with schema.Advertisement
+// Advertisement contains information about a schema.Advertisement
 type Advertisement struct {
 	ID               cid.Cid
 	PreviousID       cid.Cid
@@ -34,10 +34,13 @@ type Advertisement struct {
 	ContextID        []byte
 	Metadata         []byte
 	Addresses        []string
-	Signature        []byte
 	Entries          *EntriesIterator
 	IsRemove         bool
 	ExtendedProvider *schema.ExtendedProvider
+	// SigErr is the signature validation error. Nil if signature is valid.
+	SigErr error
+	// SignerID is the peer.ID of the of the signer.
+	SignerID peer.ID
 }
 
 func (a *Advertisement) HasEntries() bool {
@@ -144,7 +147,6 @@ func (s *ClientStore) getAdvertisement(ctx context.Context, id cid.Cid) (*Advert
 		Metadata:         ad.Metadata,
 		Addresses:        ad.Addresses,
 		PreviousID:       prevCid,
-		Signature:        ad.Signature,
 		IsRemove:         ad.IsRm,
 		ExtendedProvider: ad.ExtendedProvider,
 	}
@@ -160,6 +162,8 @@ func (s *ClientStore) getAdvertisement(ctx context.Context, id cid.Cid) (*Advert
 			}
 		}
 	}
+
+	a.SignerID, a.SigErr = ad.VerifySignature()
 
 	return a, nil
 }
@@ -198,5 +202,3 @@ func (s *ClientStore) distance(ctx context.Context, oldestCid, newestCid cid.Cid
 	}
 	return count, nil
 }
-
-// TODO: add advertisement signature verification
