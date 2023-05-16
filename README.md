@@ -23,37 +23,96 @@ ipni --help
 
 ## Examples
 
-Show the latest advertisement from a publisher:
+Here are a few examples that use the following commands:
+- `advert`    Show information about an advertisement from a specified publisher
+- `distance`  Determine the distance between two advertisements in a chain
+- `find`      Find value by CID or multihash in indexer
+- `provider`  Show information about providers known to an indexer.
+- `spaddr`    Get storage provider p2p ID and address from lotus gateway
+- `verify`    Verifies advertised content validity and queryability from an indexer
+
+### `advert`
+- Show the latest advertisement from a publisher:
 ```sh
-ipni advert --head /dns4/ipni-ads.example.com/tcp/443/https/p2p/12D3KooWQ9j3Ur5V9U63Vi6ved72TcA3sv34k74W3wpW5rwNvDc3
+ipni advert --ai=/ip4/76.219.232.45/tcp/24001/p2p/12D3KooWPNbkEgjdBNeaCGpsgCrPRETe4uBZf1ShFXStobdN18ys --head
+```
+- Show information about a specific advertisement:
+```
+./ipni advert --ai=/ip4/76.219.232.45/tcp/24001/p2p/12D3KooWPNbkEgjdBNeaCGpsgCrPRETe4uBZf1ShFXStobdN18ys \
+    --cid=baguqeerank3iclae2u4lin3vj2avuory3ny67tldh2cd5uodsgsdl6uawz3a
+```
+- Show information about multiple advertisements:
+```sh
+ipni advert --ai=/ip4/76.219.232.45/tcp/24001/p2p/12D3KooWPNbkEgjdBNeaCGpsgCrPRETe4uBZf1ShFXStobdN18ys \
+    --cid=baguqeerank3iclae2u4lin3vj2avuory3ny67tldh2cd5uodsgsdl6uawz3a
+    --cid=baguqeera3aylz3gkoxtkmqdwulxlaqbudf7nhdomfpyjqij236pwehrngngq
+```
+- Get ads from a list of CIDs in a file:
+```sh
+cat ad-cids-list.txt | ipni advert /dns4/ads.example.com/tcp/24001/p2p/<publisher-p2p-id>
 ```
 
-Ask cid.contact where to find CID `bafybeigvgzoolc3drupxhlevdp2ugqcrbcsqfmcek2zxiw5wctk3xjpjwy`:
+### `distance`
+- Get distance from an advertisement to the head of the advertisement chain:
+```sh
+ipni distance --ai=/ip4/76.219.232.45/tcp/24001/p2p/12D3KooWPNbkEgjdBNeaCGpsgCrPRETe4uBZf1ShFXStobdN18ys \
+    --start=baguqeera3aylz3gkoxtkmqdwulxlaqbudf7nhdomfpyjqij236pwehrngngq
+```
+- Find the distance between 2 advertisements on a publisher's chain:
+```sh
+ipni distance  --ai=/ip4/76.219.232.45/tcp/24001/p2p/12D3KooWPNbkEgjdBNeaCGpsgCrPRETe4uBZf1ShFXStobdN18ys \
+    --start=baguqeera3aylz3gkoxtkmqdwulxlaqbudf7nhdomfpyjqij236pwehrngngq \
+    --end=baguqeerage4rh6yqy4u37x7i337q57wrwfls5ihiei6l72rr6ezrw5vcucea
+```
+
+### `find`
+- Ask cid.contact where to find CID `bafybeigvgzoolc3drupxhlevdp2ugqcrbcsqfmcek2zxiw5wctk3xjpjwy`:
 ```sh
 ipni find -i cid.contact --cid bafybeigvgzoolc3drupxhlevdp2ugqcrbcsqfmcek2zxiw5wctk3xjpjwy
 ```
+- Ask cid.contact where to find multiple multihashes:
+```sh
+./ipni find -i cid.contact \
+    --mh=2Drjgb5kxWdcTNfhfEC8F3Ltk4s16aAgG2aLnXxSdpiGTazLGE \
+    --mh=2Drjgb4GmZ3cJGRunHYdHrmtgbmGoDuSMeN42gdU1jSiGmHVmA \
+    --mh=2DrjgbJZxQgMTvWDG6ih2SNESWeoabccawmLwuFt1T59joGFxd
+```
 
-Get information about the provider with ID `QmQzqxhK82kAmKvARFZSkUVS6fo9sySaiogAnx5EnZ6ZmC`
+### `provider`
+- Get all providers known by the indexer dev.cid.contact:
+```
+ipni provider -i dev.cid.contact --all
+```
+- Get information about the provider with ID `QmQzqxhK82kAmKvARFZSkUVS6fo9sySaiogAnx5EnZ6ZmC`
 ```
 ipni provider -i cid.contact -pid QmQzqxhK82kAmKvARFZSkUVS6fo9sySaiogAnx5EnZ6ZmC
 ```
 ```
 echo QmQzqxhK82kAmKvARFZSkUVS6fo9sySaiogAnx5EnZ6ZmC | ipni provider -i cid.contact
 ```
-
-Get information about the providers returned from find results:
+- Get information about the providers returned from find results:
 ```sh
 ipni find -i cid.contact --cid bafybeigvgzoolc3drupxhlevdp2ugqcrbcsqfmcek2zxiw5wctk3xjpjwy --id-only | ipni provider -i cid.contact
 ```
-
-See which providers cid.contact knows about that dev.cid.contact does not:
+- See which providers cid.contact knows about that dev.cid.contact does not:
 ```sh 
 ipni provider --all -i dev.cid.contact -id | ipni provider -invert -i cid.contact -id
 ```
 
-To get ads from a list in a file:
-```sh
-cat ad-cids-list.txt | ipni advert /dns4/ads.example.com/tcp/24001/p2p/12D3KooWLjeDyvuv7rbfG2wWNvWn7ybmmU88PirmSckuqCgXBAph
+### `spaddr`
+- Get p2p ID and multiaddrs of storage provider identified by storage provider ID "t01000":
+```
+./ipni spaddr --spid=t01000
+```
+
+### `verify ingest`
+- Verfy ingestion at cid.contact, of multihashes 
+```
+./ipni verify ingest -i cid.contact \
+    --ad-cid=baguqeerank3iclae2u4lin3vj2avuory3ny67tldh2cd5uodsgsdl6uawz3a \
+    --provider-id=12D3KooWPNbkEgjdBNeaCGpsgCrPRETe4uBZf1ShFXStobdN18ys \
+    --batch-size=25 \
+    --sampling-prob=0.125
 ```
 
 ## License
