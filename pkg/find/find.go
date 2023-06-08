@@ -43,13 +43,6 @@ var findFlags = []cli.Flag{
 		Aliases: []string{"i"},
 		Value:   "http://localhost:3000",
 	},
-	&cli.StringFlag{
-		Name:     "indexerid",
-		Usage:    "libp2p peer ID of indexer, for use when protocol=libp2p",
-		Aliases:  []string{"iid"},
-		EnvVars:  []string{"INDEXER_ID"},
-		Required: false,
-	},
 	&cli.BoolFlag{
 		Name:  "id-only",
 		Usage: "Only show provider's peer ID from each result",
