@@ -8,15 +8,15 @@ require (
 	github.com/ipfs/go-datastore v0.6.0
 	github.com/ipld/go-car/v2 v2.10.0
 	github.com/ipld/go-ipld-prime v0.20.0
-	github.com/ipni/go-libipni v0.0.7
-	github.com/libp2p/go-libp2p v0.27.1
+	github.com/ipni/go-libipni v0.2.1
+	github.com/libp2p/go-libp2p v0.27.5
 	github.com/mattn/go-isatty v0.0.18
 	github.com/montanaflynn/stats v0.7.0
 	github.com/multiformats/go-multiaddr v0.9.0
-	github.com/multiformats/go-multicodec v0.8.1
-	github.com/multiformats/go-multihash v0.2.1
-	github.com/stretchr/testify v1.8.2
-	github.com/urfave/cli/v2 v2.25.1
+	github.com/multiformats/go-multicodec v0.9.0
+	github.com/multiformats/go-multihash v0.2.2
+	github.com/stretchr/testify v1.8.4
+	github.com/urfave/cli/v2 v2.25.5
 	github.com/ybbus/jsonrpc/v2 v2.1.7
 )
 
@@ -132,7 +132,7 @@ require (
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/spaolacci/murmur3 v1.1.0 // indirect
 	github.com/whyrusleeping/cbor v0.0.0-20171005072247-63513f603b11 // indirect
-	github.com/whyrusleeping/cbor-gen v0.0.0-20230126041949-52956bd4c9aa // indirect
+	github.com/whyrusleeping/cbor-gen v0.0.0-20230418232409-daab9ece03a0 // indirect
 	github.com/xrash/smetrics v0.0.0-20201216005158-039620a65673 // indirect
 	go.opentelemetry.io/otel v1.13.0 // indirect
 	go.opentelemetry.io/otel/sdk v1.11.1 // indirect
@@ -149,7 +149,6 @@ require (
 	golang.org/x/sync v0.1.0 // indirect
 	golang.org/x/sys v0.7.0 // indirect
 	golang.org/x/text v0.8.0 // indirect
-	golang.org/x/time v0.0.0-20220722155302-e5dcc9cfc0b9 // indirect
 	golang.org/x/tools v0.7.0 // indirect
 	golang.org/x/xerrors v0.0.0-20220907171357-04be3eba64a2 // indirect
 	google.golang.org/protobuf v1.30.0 // indirect

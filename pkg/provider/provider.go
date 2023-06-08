@@ -51,9 +51,8 @@ var providerFlags = []cli.Flag{
 		Aliases: []string{"a"},
 	},
 	&cli.BoolFlag{
-		Name:    "id-only",
-		Usage:   "Only show provider's peer ID",
-		Aliases: []string{"id"},
+		Name:  "id-only",
+		Usage: "Only show provider's peer ID",
 	},
 	&cli.BoolFlag{
 		Name:  "distance",
