@@ -6,8 +6,6 @@ import (
 
 	"github.com/ipfs/go-cid"
 	"github.com/ipni/go-libipni/find/client"
-	httpclient "github.com/ipni/go-libipni/find/client/http"
-	p2pclient "github.com/ipni/go-libipni/find/client/p2p"
 	"github.com/ipni/go-libipni/find/model"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/multiformats/go-multihash"
@@ -15,8 +13,12 @@ import (
 )
 
 var FindCmd = &cli.Command{
-	Name:   "find",
-	Usage:  "Find value by CID or multihash in indexer",
+	Name:  "find",
+	Usage: "Lookup storage provider data by CID or multihash at indexer",
+	Description: `The find command queries an indexer, using the supplied CIDs or multihashes as lookup keys, for the storage provider data needed to retrieve the content identified by the keys.
+
+Example usage:
+	ipni find -i cid.contact --cid bafybeigvgzoolc3drupxhlevdp2ugqcrbcsqfmcek2zxiw5wctk3xjpjwy`,
 	Flags:  findFlags,
 	Action: findAction,
 }
@@ -46,12 +48,6 @@ var findFlags = []cli.Flag{
 		EnvVars:  []string{"INDEXER_ID"},
 		Required: false,
 	},
-	&cli.StringFlag{
-		Name:     "protocol",
-		Usage:    "Protocol to query the indexer (http, libp2p)",
-		Value:    "http",
-		Required: false,
-	},
 	&cli.BoolFlag{
 		Name:  "id-only",
 		Usage: "Only show provider's peer ID from each result",
@@ -59,8 +55,6 @@ var findFlags = []cli.Flag{
 }
 
 func findAction(cctx *cli.Context) error {
-	protocol := cctx.String("protocol")
-
 	mhArgs := cctx.StringSlice("mh")
 	cidArgs := cctx.StringSlice("cid")
 	if len(mhArgs) == 0 && len(cidArgs) == 0 {
@@ -86,30 +80,9 @@ func findAction(cctx *cli.Context) error {
 	var cl client.Interface
 	var err error
 
-	switch protocol {
-	case "http":
-		cl, err = httpclient.New(cctx.String("indexer"))
-		if err != nil {
-			return err
-		}
-	case "libp2p":
-		peerID, err := peer.Decode(cctx.String("peerid"))
-		if err != nil {
-			return err
-		}
-
-		c, err := p2pclient.New(nil, peerID)
-		if err != nil {
-			return err
-		}
-
-		err = c.Connect(cctx.Context, cctx.String("indexer"))
-		if err != nil {
-			return err
-		}
-		cl = c
-	default:
-		return fmt.Errorf("unrecognized protocol type for client interaction: %s", protocol)
+	cl, err = client.New(cctx.String("indexer"))
+	if err != nil {
+		return err
 	}
 
 	var resp *model.FindResponse
