@@ -13,7 +13,7 @@ import (
 	"github.com/ipld/go-car/v2"
 	"github.com/ipld/go-car/v2/index"
 	"github.com/ipni/go-libipni/apierror"
-	httpfindclient "github.com/ipni/go-libipni/find/client/http"
+	"github.com/ipni/go-libipni/find/client"
 	"github.com/ipni/go-libipni/find/model"
 	"github.com/ipni/ipni-cli/pkg/adpub"
 	"github.com/libp2p/go-libp2p/core/peer"
@@ -262,7 +262,7 @@ func verifyIngestFromProvider(cctx *cli.Context, provID peer.ID) error {
 		adDepthLimitStr = fmt.Sprintf("%d", adDepthLimit)
 	}
 
-	find, err := httpfindclient.New(cctx.String("indexer"))
+	find, err := client.New(cctx.String("indexer"))
 	if err != nil {
 		return err
 	}
@@ -383,7 +383,7 @@ func verifyIngestFromCar(cctx *cli.Context, provID peer.ID, carPath string) erro
 		return err
 	}
 
-	find, err := httpfindclient.New(cctx.String("indexer"))
+	find, err := client.New(cctx.String("indexer"))
 	if err != nil {
 		return err
 	}
@@ -451,7 +451,7 @@ func verifyIngestFromCarIndex(cctx *cli.Context, provID peer.ID, carIndexPath st
 		return errInvalidCarIndexFormat()
 	}
 
-	find, err := httpfindclient.New(cctx.String("indexer"))
+	find, err := client.New(cctx.String("indexer"))
 	if err != nil {
 		return err
 	}
@@ -473,7 +473,7 @@ func errVerifyIngestMultipleSources() error {
 	return cli.Exit("Multiple multihash sources are specified. Only a single source at a time is supported.", 1)
 }
 
-func verifyIngestFromCarIterableIndex(cctx *cli.Context, find *httpfindclient.Client, provID peer.ID, idx index.IterableIndex) (*verifyResult, error) {
+func verifyIngestFromCarIterableIndex(cctx *cli.Context, find *client.Client, provID peer.ID, idx index.IterableIndex) (*verifyResult, error) {
 	var mhs []multihash.Multihash
 	if err := idx.ForEach(func(mh multihash.Multihash, _ uint64) error {
 		if include() {
@@ -549,7 +549,7 @@ func (r *verifyResult) print(samplingProb float64, rngSeed int64, printUnindexed
 	}
 }
 
-func verifyIngestFromMhs(cctx *cli.Context, find *httpfindclient.Client, wantProvID peer.ID, mhs []multihash.Multihash) (*verifyResult, error) {
+func verifyIngestFromMhs(cctx *cli.Context, find *client.Client, wantProvID peer.ID, mhs []multihash.Multihash) (*verifyResult, error) {
 	chunkSize := cctx.Int("batch-size")
 	aggResult := &verifyResult{}
 	for len(mhs) >= chunkSize {
@@ -571,7 +571,7 @@ func verifyIngestFromMhs(cctx *cli.Context, find *httpfindclient.Client, wantPro
 	return aggResult, nil
 }
 
-func verifyIngest(cctx *cli.Context, find *httpfindclient.Client, wantProvID peer.ID, mhs []multihash.Multihash) (*verifyResult, error) {
+func verifyIngest(cctx *cli.Context, find *client.Client, wantProvID peer.ID, mhs []multihash.Multihash) (*verifyResult, error) {
 	result := &verifyResult{}
 	mhsCount := len(mhs)
 	result.TotalMhChecked = mhsCount
