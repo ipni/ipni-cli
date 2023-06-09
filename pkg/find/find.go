@@ -48,7 +48,7 @@ var findFlags = []cli.Flag{
 	},
 	&cli.StringFlag{
 		Name:     "dhstore",
-		Usage:    "URL of double-hashed store, if different from indexer",
+		Usage:    "URL of double-hashed (reader-private) store, if different from indexer",
 		EnvVars:  []string{"DHSTORE"},
 		Required: false,
 	},
@@ -57,12 +57,12 @@ var findFlags = []cli.Flag{
 		Usage: "Only show provider's peer ID from each result",
 	},
 	&cli.BoolFlag{
-		Name:  "no-dh",
-		Usage: "Do plain query only.",
+		Name:  "no-priv",
+		Usage: "Do no use reader-privacy for queries.",
 	},
 	&cli.BoolFlag{
 		Name:  "fallback",
-		Usage: "Do plain query only if indexer does not support double-hashing",
+		Usage: "Do non-private query only if the indexer does not support reader-privacy",
 	},
 }
 
@@ -89,7 +89,7 @@ func findAction(cctx *cli.Context) error {
 		mhs = append(mhs, c.Hash())
 	}
 
-	if cctx.Bool("no-dh") {
+	if cctx.Bool("no-priv") {
 		return clearFind(cctx, mhs)
 	}
 	return dhFind(cctx, mhs)
@@ -126,6 +126,7 @@ func dhFind(cctx *cli.Context, mhs []multihash.Multihash) error {
 	if resp == nil && cctx.Bool("fallback") {
 		return clearFind(cctx, mhs)
 	}
+	fmt.Println("🔒 Reader privacy enabled")
 	return printResults(cctx, resp)
 }
 
