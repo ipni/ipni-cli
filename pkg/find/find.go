@@ -3,10 +3,12 @@ package find
 import (
 	"encoding/base64"
 	"fmt"
+	"strings"
 
 	"github.com/ipfs/go-cid"
 	"github.com/ipni/go-libipni/find/client"
 	"github.com/ipni/go-libipni/find/model"
+	"github.com/ipni/go-libipni/metadata"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/multiformats/go-multihash"
 	"github.com/urfave/cli/v2"
@@ -41,13 +43,6 @@ var findFlags = []cli.Flag{
 		Aliases: []string{"i"},
 		Value:   "http://localhost:3000",
 	},
-	&cli.StringFlag{
-		Name:     "indexerid",
-		Usage:    "libp2p peer ID of indexer, for use when protocol=libp2p",
-		Aliases:  []string{"iid"},
-		EnvVars:  []string{"INDEXER_ID"},
-		Required: false,
-	},
 	&cli.BoolFlag{
 		Name:  "id-only",
 		Usage: "Only show provider's peer ID from each result",
@@ -77,10 +72,7 @@ func findAction(cctx *cli.Context) error {
 		mhs = append(mhs, c.Hash())
 	}
 
-	var cl client.Interface
-	var err error
-
-	cl, err = client.New(cctx.String("indexer"))
+	cl, err := client.New(cctx.String("indexer"))
 	if err != nil {
 		return err
 	}
@@ -126,9 +118,25 @@ func findAction(cctx *cli.Context) error {
 			fmt.Println("  Provider:", provStr)
 			for _, pr := range prs {
 				fmt.Println("    ContextID:", base64.StdEncoding.EncodeToString(pr.ContextID))
-				fmt.Println("    Metadata:", base64.StdEncoding.EncodeToString(pr.Metadata))
+				fmt.Println("      Metadata:", decodeMetadata(pr.Metadata))
 			}
 		}
 	}
 	return nil
+}
+
+func decodeMetadata(metaBytes []byte) string {
+	if len(metaBytes) == 0 {
+		return "nil"
+	}
+	meta := metadata.Default.New()
+	err := meta.UnmarshalBinary(metaBytes)
+	if err != nil {
+		return fmt.Sprint("error: ", err.Error())
+	}
+	protoStrs := make([]string, meta.Len())
+	for i, p := range meta.Protocols() {
+		protoStrs[i] = p.String()
+	}
+	return strings.Join(protoStrs, ", ")
 }
