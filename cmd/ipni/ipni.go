@@ -5,8 +5,7 @@ import (
 	"os"
 
 	version "github.com/ipni/ipni-cli"
-	"github.com/ipni/ipni-cli/pkg/advert"
-	"github.com/ipni/ipni-cli/pkg/distance"
+	"github.com/ipni/ipni-cli/pkg/ads"
 	"github.com/ipni/ipni-cli/pkg/find"
 	"github.com/ipni/ipni-cli/pkg/provider"
 	"github.com/ipni/ipni-cli/pkg/spaddr"
@@ -20,8 +19,7 @@ func main() {
 		Usage:   "Commands to interact with IPNI indexers and index providers",
 		Version: version.Version,
 		Commands: []*cli.Command{
-			advert.AdvertCmd,
-			distance.DistanceCmd,
+			ads.AdsCmd,
 			find.FindCmd,
 			provider.ProviderCmd,
 			spaddr.SPAddrCmd,

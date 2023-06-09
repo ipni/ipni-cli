@@ -6,6 +6,7 @@
 
 bin/
 ipni
+!ipni/
 
 *~
 *.car

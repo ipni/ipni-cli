@@ -202,3 +202,42 @@ func (s *ClientStore) distance(ctx context.Context, oldestCid, newestCid cid.Cid
 	}
 	return count, nil
 }
+
+func (s *ClientStore) list(ctx context.Context, nextCid cid.Cid, n int, w io.Writer) error {
+	for i := 0; i < n; i++ {
+		val, err := s.Batching.Get(ctx, datastore.NewKey(nextCid.String()))
+		if err != nil {
+			return err
+		}
+
+		nb := schema.AdvertisementPrototype.NewBuilder()
+		decoder, err := multicodec.LookupDecoder(nextCid.Prefix().Codec)
+		if err != nil {
+			return err
+		}
+
+		err = decoder(nb, bytes.NewBuffer(val))
+		if err != nil {
+			return err
+		}
+		node := nb.Build()
+
+		ad, err := schema.UnwrapAdvertisement(node)
+		if err != nil {
+			return err
+		}
+
+		if _, err = io.WriteString(w, nextCid.String()); err != nil {
+			return err
+		}
+		if _, err = io.WriteString(w, "\n"); err != nil {
+			return err
+		}
+
+		if ad.PreviousID == nil {
+			break
+		}
+		nextCid = ad.PreviousID.(cidlink.Link).Cid
+	}
+	return nil
+}
