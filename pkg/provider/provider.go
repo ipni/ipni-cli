@@ -71,7 +71,7 @@ var providerFlags = []cli.Flag{
 func providerAction(cctx *cli.Context) error {
 	if cctx.Bool("count") {
 		if cctx.Bool("invert") {
-			return errors.New("cannot use --all with --invert")
+			return errors.New("cannot use --count with --invert")
 		}
 		return countProviders(cctx)
 	}
