@@ -51,12 +51,16 @@ var providerFlags = []cli.Flag{
 		Aliases: []string{"a"},
 	},
 	&cli.BoolFlag{
-		Name:  "id-only",
-		Usage: "Only show provider's peer ID",
+		Name:  "count",
+		Usage: "Count all providers and output only the count. Implies --all",
 	},
 	&cli.BoolFlag{
 		Name:  "distance",
 		Usage: "Calculate distance from last seen advertisement to provider's current head advertisement",
+	},
+	&cli.BoolFlag{
+		Name:  "id-only",
+		Usage: "Only show provider's peer ID",
 	},
 	&cli.BoolFlag{
 		Name:  "invert",
@@ -65,6 +69,13 @@ var providerFlags = []cli.Flag{
 }
 
 func providerAction(cctx *cli.Context) error {
+	if cctx.Bool("count") {
+		if cctx.Bool("invert") {
+			return errors.New("cannot use --count with --invert")
+		}
+		return countProviders(cctx)
+	}
+
 	if cctx.Bool("all") {
 		if cctx.Bool("invert") {
 			return errors.New("cannot use --all with --invert")
@@ -149,6 +160,19 @@ func getProvider(cctx *cli.Context, cl *client.Client, peerID peer.ID) error {
 	}
 
 	showProviderInfo(cctx, prov)
+	return nil
+}
+
+func countProviders(cctx *cli.Context) error {
+	cl, err := client.New(cctx.String("indexer"))
+	if err != nil {
+		return err
+	}
+	provs, err := cl.ListProviders(cctx.Context)
+	if err != nil {
+		return err
+	}
+	fmt.Println(len(provs))
 	return nil
 }
 
