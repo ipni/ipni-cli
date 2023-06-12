@@ -2,10 +2,13 @@ package find
 
 import (
 	"encoding/base64"
+	"errors"
 	"fmt"
+	"net/http"
 	"strings"
 
 	"github.com/ipfs/go-cid"
+	"github.com/ipni/go-libipni/apierror"
 	"github.com/ipni/go-libipni/find/client"
 	"github.com/ipni/go-libipni/find/model"
 	"github.com/ipni/go-libipni/metadata"
@@ -43,9 +46,23 @@ var findFlags = []cli.Flag{
 		Aliases: []string{"i"},
 		Value:   "http://localhost:3000",
 	},
+	&cli.StringFlag{
+		Name:     "dhstore",
+		Usage:    "URL of double-hashed (reader-private) store, if different from indexer",
+		EnvVars:  []string{"DHSTORE"},
+		Required: false,
+	},
 	&cli.BoolFlag{
 		Name:  "id-only",
 		Usage: "Only show provider's peer ID from each result",
+	},
+	&cli.BoolFlag{
+		Name:  "no-priv",
+		Usage: "Do no use reader-privacy for queries.",
+	},
+	&cli.BoolFlag{
+		Name:  "fallback",
+		Usage: "Do non-private query only if the indexer does not support reader-privacy",
 	},
 }
 
@@ -72,6 +89,48 @@ func findAction(cctx *cli.Context) error {
 		mhs = append(mhs, c.Hash())
 	}
 
+	if cctx.Bool("no-priv") {
+		return clearFind(cctx, mhs)
+	}
+	return dhFind(cctx, mhs)
+}
+
+func dhFind(cctx *cli.Context, mhs []multihash.Multihash) error {
+	dhURL := cctx.String("dhstore")
+	if dhURL == "" {
+		dhURL = cctx.String("indexer")
+	}
+
+	cl, err := client.NewDHashClient(dhURL, cctx.String("indexer"))
+	if err != nil {
+		return err
+	}
+
+	var resp *model.FindResponse
+	for _, mh := range mhs {
+		r, err := cl.Find(cctx.Context, mh)
+		if err != nil {
+			// TODO: Look for error that specifies double-hashing not supported.
+			var ae *apierror.Error
+			if errors.As(err, &ae) && ae.Status() == http.StatusNotFound {
+				continue
+			}
+			return err
+		}
+		if resp == nil {
+			resp = r
+		} else {
+			resp.MultihashResults = append(resp.MultihashResults, r.MultihashResults...)
+		}
+	}
+	if resp == nil && cctx.Bool("fallback") {
+		return clearFind(cctx, mhs)
+	}
+	fmt.Println("🔒 Reader privacy enabled")
+	return printResults(cctx, resp)
+}
+
+func clearFind(cctx *cli.Context, mhs []multihash.Multihash) error {
 	cl, err := client.New(cctx.String("indexer"))
 	if err != nil {
 		return err
@@ -87,7 +146,11 @@ func findAction(cctx *cli.Context) error {
 		return err
 	}
 
-	if len(resp.MultihashResults) == 0 {
+	return printResults(cctx, resp)
+}
+
+func printResults(cctx *cli.Context, resp *model.FindResponse) error {
+	if resp == nil || len(resp.MultihashResults) == 0 {
 		fmt.Println("index not found")
 		return nil
 	}
