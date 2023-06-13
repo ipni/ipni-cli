@@ -96,12 +96,8 @@ func findAction(cctx *cli.Context) error {
 }
 
 func dhFind(cctx *cli.Context, mhs []multihash.Multihash) error {
-	dhURL := cctx.String("dhstore")
-	if dhURL == "" {
-		dhURL = cctx.String("indexer")
-	}
-
-	cl, err := client.NewDHashClient(dhURL, cctx.String("indexer"))
+	cl, err := client.NewDHashClient(cctx.String("indexer"),
+		client.WithDHStoreURL(cctx.String("dhstore")))
 	if err != nil {
 		return err
 	}
