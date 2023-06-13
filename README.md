@@ -24,43 +24,50 @@ ipni --help
 ## Examples
 
 Here are a few examples that use the following commands:
-- `advert`    Show information about an advertisement from a specified publisher
-- `distance`  Determine the distance between two advertisements in a chain
+- `ads`       Show advertisements on a chain from a specified publisher
+  - `get`         Show information about an advertisement from a specified publisher
+  - `list`        List advertisements from latest to earlier from a specified publisher
+  - `dist`        Determine the distance between two advertisements in a chain
 - `find`      Find value by CID or multihash in indexer
 - `provider`  Show information about providers known to an indexer.
 - `spaddr`    Get storage provider p2p ID and address from lotus gateway
 - `verify`    Verifies advertised content validity and queryability from an indexer
 
-### `advert`
+### `ads get`
 - Show the latest advertisement from a publisher:
 ```sh
-ipni advert --ai=/ip4/76.219.232.45/tcp/24001/p2p/12D3KooWPNbkEgjdBNeaCGpsgCrPRETe4uBZf1ShFXStobdN18ys --head
+ipni ads get --ai=/ip4/76.219.232.45/tcp/24001/p2p/12D3KooWPNbkEgjdBNeaCGpsgCrPRETe4uBZf1ShFXStobdN18ys --head
 ```
 - Show information about a specific advertisement:
 ```
-./ipni advert --ai=/ip4/76.219.232.45/tcp/24001/p2p/12D3KooWPNbkEgjdBNeaCGpsgCrPRETe4uBZf1ShFXStobdN18ys \
+./ipni ads get --ai=/ip4/76.219.232.45/tcp/24001/p2p/12D3KooWPNbkEgjdBNeaCGpsgCrPRETe4uBZf1ShFXStobdN18ys \
     --cid=baguqeerank3iclae2u4lin3vj2avuory3ny67tldh2cd5uodsgsdl6uawz3a
 ```
 - Show information about multiple advertisements:
 ```sh
-ipni advert --ai=/ip4/76.219.232.45/tcp/24001/p2p/12D3KooWPNbkEgjdBNeaCGpsgCrPRETe4uBZf1ShFXStobdN18ys \
+ipni ads get --ai=/ip4/76.219.232.45/tcp/24001/p2p/12D3KooWPNbkEgjdBNeaCGpsgCrPRETe4uBZf1ShFXStobdN18ys \
     --cid=baguqeerank3iclae2u4lin3vj2avuory3ny67tldh2cd5uodsgsdl6uawz3a
     --cid=baguqeera3aylz3gkoxtkmqdwulxlaqbudf7nhdomfpyjqij236pwehrngngq
 ```
 - Get ads from a list of CIDs in a file:
 ```sh
-cat ad-cids-list.txt | ipni advert /dns4/ads.example.com/tcp/24001/p2p/<publisher-p2p-id>
+cat ad-cids-list.txt | ipni add get /dns4/ads.example.com/tcp/24001/p2p/<publisher-p2p-id>
+```
+### `ads list`
+- List the 10 most recent advertisements from a provider:
+```sh
+ipni ads list -n 10 --ai=/ip4/38.70.220.112/tcp/10201/p2p/12D3KooWEAcRJ5fYjuavKgAhu79juR7mgaznSZxsm2RRUBiWurv9
 ```
 
-### `distance`
+### `ads dist`
 - Get distance from an advertisement to the head of the advertisement chain:
 ```sh
-ipni distance --ai=/ip4/76.219.232.45/tcp/24001/p2p/12D3KooWPNbkEgjdBNeaCGpsgCrPRETe4uBZf1ShFXStobdN18ys \
+ipni ads dist --ai=/ip4/76.219.232.45/tcp/24001/p2p/12D3KooWPNbkEgjdBNeaCGpsgCrPRETe4uBZf1ShFXStobdN18ys \
     --start=baguqeera3aylz3gkoxtkmqdwulxlaqbudf7nhdomfpyjqij236pwehrngngq
 ```
 - Find the distance between 2 advertisements on a publisher's chain:
 ```sh
-ipni distance  --ai=/ip4/76.219.232.45/tcp/24001/p2p/12D3KooWPNbkEgjdBNeaCGpsgCrPRETe4uBZf1ShFXStobdN18ys \
+ipni ads dist  --ai=/ip4/76.219.232.45/tcp/24001/p2p/12D3KooWPNbkEgjdBNeaCGpsgCrPRETe4uBZf1ShFXStobdN18ys \
     --start=baguqeera3aylz3gkoxtkmqdwulxlaqbudf7nhdomfpyjqij236pwehrngngq \
     --end=baguqeerage4rh6yqy4u37x7i337q57wrwfls5ihiei6l72rr6ezrw5vcucea
 ```

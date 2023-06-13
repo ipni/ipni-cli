@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"strings"
 	"time"
@@ -25,6 +26,7 @@ type Client interface {
 	GetAdvertisement(context.Context, cid.Cid) (*Advertisement, error)
 	Close() error
 	Distance(context.Context, cid.Cid, cid.Cid) (int, error)
+	List(context.Context, cid.Cid, int, io.Writer) error
 	SyncEntriesWithRetry(context.Context, cid.Cid) error
 }
 
@@ -93,6 +95,7 @@ func (c *client) Distance(ctx context.Context, oldestCid, newestCid cid.Cid) (in
 	if oldestCid == cid.Undef {
 		return 0, errors.New("must specify a oldest CID")
 	}
+
 	// Sync the advertisement without entries first.
 	var err error
 	_, err = c.syncAdWithRetry(ctx, oldestCid)
@@ -125,6 +128,28 @@ func (c *client) Distance(ctx context.Context, oldestCid, newestCid cid.Cid) (in
 	}
 
 	return c.store.distance(ctx, oldestCid, newestCid)
+}
+
+func (c *client) List(ctx context.Context, latestCid cid.Cid, n int, w io.Writer) error {
+	var rLimit selector.RecursionLimit
+	if n < 1 {
+		rLimit = selector.RecursionLimitNone()
+	} else {
+		rLimit = selector.RecursionLimitDepth(int64(n))
+	}
+	ssb := builder.NewSelectorSpecBuilder(basicnode.Prototype.Any)
+	adSeqSel := ssb.ExploreFields(
+		func(efsb builder.ExploreFieldsSpecBuilder) {
+			efsb.Insert("PreviousID", ssb.ExploreRecursiveEdge())
+		}).Node()
+	sel := dagsync.ExploreRecursiveWithStopNode(rLimit, adSeqSel, nil)
+
+	latestCid, err := c.sub.Sync(ctx, c.publisher, latestCid, sel)
+	if err != nil {
+		return err
+	}
+
+	return c.store.list(ctx, latestCid, n, w)
 }
 
 func (c *client) GetAdvertisement(ctx context.Context, adCid cid.Cid) (*Advertisement, error) {

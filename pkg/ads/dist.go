@@ -1,4 +1,4 @@
-package distance
+package ads
 
 import (
 	"fmt"
@@ -9,23 +9,16 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-var DistanceCmd = &cli.Command{
-	Name:        "distance",
+var adsDistSubCmd = &cli.Command{
+	Name:        "dist",
 	Usage:       "Determine the distance between two advertisements in a chain",
 	Description: "Sepcify the start and optional end advertisement CIDs. If end CID is not specified use the latest advertisement",
-	Flags:       distanceFlags,
-	Action:      distanceAction,
+	Flags:       adsDistFlags,
+	Action:      adsDistAction,
 }
 
-var distanceFlags = []cli.Flag{
-	&cli.StringFlag{
-		Name: "addr-info",
-		Usage: "Publisher's address info in form of libp2p multiaddr info.\n" +
-			"Example GraphSync: /ip4/1.2.3.4/tcp/1234/p2p/12D3KooWE8yt84RVwW3sFcd6WMjbUdWrZer2YtT4dmtj3dHdahSZ\n" +
-			"Example HTTP:      /ip4/1.2.3.4/tcp/1234/http/p2p/12D3KooWE8yt84RVwW3sFcd6WMjbUdWrZer2YtT4dmtj3dHdahSZ",
-		Aliases:  []string{"ai"},
-		Required: true,
-	},
+var adsDistFlags = []cli.Flag{
+	addrInfoFlag,
 	&cli.StringFlag{
 		Name:     "start",
 		Usage:    "CID of earliest advertisement in chain",
@@ -40,15 +33,10 @@ var distanceFlags = []cli.Flag{
 		Usage:   "Output only the distance",
 		Aliases: []string{"q"},
 	},
-	&cli.StringFlag{
-		Name:    "topic",
-		Usage:   "Topic on which index advertisements are published. Only needed if connecting via Graphsync with non-standard topic.",
-		Value:   "/indexer/ingest/mainnet",
-		Aliases: []string{"t"},
-	},
+	topicFlag,
 }
 
-func distanceAction(cctx *cli.Context) error {
+func adsDistAction(cctx *cli.Context) error {
 	addrInfo, err := peer.AddrInfoFromString(cctx.String("addr-info"))
 	if err != nil {
 		return fmt.Errorf("bad pub-addr-info: %w", err)
