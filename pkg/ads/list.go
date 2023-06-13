@@ -30,7 +30,7 @@ var adsListFlags = []cli.Flag{
 	},
 	&cli.IntFlag{
 		Name:     "number",
-		Usage:    "Number of advertisements to list",
+		Usage:    "Number of advertisements to list. Specify 0 for all.",
 		Aliases:  []string{"n"},
 		Required: true,
 	},
