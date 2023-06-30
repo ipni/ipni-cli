@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	version "github.com/ipni/ipni-cli"
+	"github.com/ipni/ipni-cli"
 	"github.com/ipni/ipni-cli/pkg/ads"
 	"github.com/ipni/ipni-cli/pkg/find"
 	"github.com/ipni/ipni-cli/pkg/provider"
@@ -17,7 +17,7 @@ func main() {
 	app := &cli.App{
 		Name:    "ipni",
 		Usage:   "Commands to interact with IPNI indexers and index providers",
-		Version: version.Version,
+		Version: ipnicli.Version,
 		Commands: []*cli.Command{
 			ads.AdsCmd,
 			find.FindCmd,

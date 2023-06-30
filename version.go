@@ -1,4 +1,4 @@
-package version
+package ipnicli
 
 import (
 	_ "embed"
