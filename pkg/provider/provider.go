@@ -59,6 +59,10 @@ var providerFlags = []cli.Flag{
 		Usage: "Calculate distance from last seen advertisement to provider's current head advertisement",
 	},
 	&cli.BoolFlag{
+		Name:  "error",
+		Usage: "Only show providers that have a LastError",
+	},
+	&cli.BoolFlag{
 		Name:  "id-only",
 		Usage: "Only show provider's peer ID",
 	},
@@ -208,8 +212,12 @@ func listProviders(cctx *cli.Context, peerIDs []peer.ID) error {
 		return nil
 	}
 
+	onlyWithError := cctx.Bool("error")
 	for _, pinfo := range provs {
 		if _, ok := exclude[pinfo.AddrInfo.ID]; ok {
+			continue
+		}
+		if onlyWithError && pinfo.LastError == "" {
 			continue
 		}
 		showProviderInfo(cctx, pinfo)
@@ -250,6 +258,11 @@ func showProviderInfo(cctx *cli.Context, pinfo *model.ProviderInfo) {
 		fmt.Println("    Inactive: true")
 	}
 
+	if pinfo.LastError != "" {
+		fmt.Println("    LastError:", pinfo.LastError)
+		fmt.Println("    LastErrorTime:", pinfo.LastErrorTime)
+	}
+
 	if cctx.Bool("distance") {
 		fmt.Print("    Distance to head advertisement: ")
 		dist, err := getLastSeenDistance(cctx, pinfo)
@@ -259,6 +272,8 @@ func showProviderInfo(cctx *cli.Context, pinfo *model.ProviderInfo) {
 			fmt.Println(dist)
 		}
 	}
+
+	fmt.Println()
 }
 
 func getLastSeenDistance(cctx *cli.Context, pinfo *model.ProviderInfo) (int, error) {
