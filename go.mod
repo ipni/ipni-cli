@@ -8,8 +8,8 @@ require (
 	github.com/ipfs/go-datastore v0.6.0
 	github.com/ipld/go-car/v2 v2.10.0
 	github.com/ipld/go-ipld-prime v0.20.0
-	github.com/ipni/go-libipni v0.2.2
-	github.com/libp2p/go-libp2p v0.28.0
+	github.com/ipni/go-libipni v0.2.8
+	github.com/libp2p/go-libp2p v0.28.1
 	github.com/mattn/go-isatty v0.0.19
 	github.com/montanaflynn/stats v0.7.0
 	github.com/multiformats/go-multiaddr v0.9.0
@@ -40,6 +40,8 @@ require (
 	github.com/filecoin-project/go-statestore v0.2.0 // indirect
 	github.com/flynn/noise v1.0.0 // indirect
 	github.com/francoispqt/gojay v1.2.13 // indirect
+	github.com/gammazero/channelqueue v0.2.1 // indirect
+	github.com/gammazero/deque v0.2.1 // indirect
 	github.com/go-logr/logr v1.2.4 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-task/slim-sprig v0.0.0-20230315185526-52ccab3ef572 // indirect

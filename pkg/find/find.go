@@ -58,7 +58,7 @@ var findFlags = []cli.Flag{
 	},
 	&cli.BoolFlag{
 		Name:  "no-priv",
-		Usage: "Do no use reader-privacy for queries.",
+		Usage: "Do no use reader-privacy for queries. If --dhstore also specified, use in place of --indexer",
 	},
 	&cli.BoolFlag{
 		Name:  "fallback",
@@ -127,7 +127,11 @@ func dhFind(cctx *cli.Context, mhs []multihash.Multihash) error {
 }
 
 func clearFind(cctx *cli.Context, mhs []multihash.Multihash) error {
-	cl, err := client.New(cctx.String("indexer"))
+	idxr := cctx.String("dhstore")
+	if idxr == "" {
+		idxr = cctx.String("indexer")
+	}
+	cl, err := client.New(idxr)
 	if err != nil {
 		return err
 	}
