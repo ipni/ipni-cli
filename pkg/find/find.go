@@ -39,12 +39,11 @@ var findFlags = []cli.Flag{
 		Usage:    "Specify CID to use as indexer key, multiple OK",
 		Required: false,
 	},
-	&cli.StringFlag{
+	&cli.StringSliceFlag{
 		Name:    "indexer",
-		Usage:   "URL of indexer to query",
-		EnvVars: []string{"INDEXER"},
+		Usage:   "URL of indexer to query. Multiple OK to specify providers info sources.",
 		Aliases: []string{"i"},
-		Value:   "http://localhost:3000",
+		Value:   cli.NewStringSlice("http://localhost:3000"),
 	},
 	&cli.StringFlag{
 		Name:     "dhstore",
@@ -96,8 +95,11 @@ func findAction(cctx *cli.Context) error {
 }
 
 func dhFind(cctx *cli.Context, mhs []multihash.Multihash) error {
-	cl, err := client.NewDHashClient(cctx.String("indexer"),
-		client.WithDHStoreURL(cctx.String("dhstore")))
+	cl, err := client.NewDHashClient(
+		client.WithProvidersURL(cctx.StringSlice("indexer")...),
+		client.WithDHStoreURL(cctx.String("dhstore")),
+		client.WithPcacheTTL(0),
+	)
 	if err != nil {
 		return err
 	}
@@ -129,7 +131,7 @@ func dhFind(cctx *cli.Context, mhs []multihash.Multihash) error {
 func clearFind(cctx *cli.Context, mhs []multihash.Multihash) error {
 	idxr := cctx.String("dhstore")
 	if idxr == "" {
-		idxr = cctx.String("indexer")
+		idxr = cctx.StringSlice("indexer")[0]
 	}
 	cl, err := client.New(idxr)
 	if err != nil {

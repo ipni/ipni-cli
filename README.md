@@ -105,6 +105,15 @@ ipni find -i cid.contact --cid bafybeigvgzoolc3drupxhlevdp2ugqcrbcsqfmcek2zxiw5w
 ```sh 
 ipni provider --all -i dev.cid.contact -id | ipni provider -invert -i cid.contact -id
 ```
+- Get combined information from multiple providers:
+```
+$ ipni provider --all -i alva.dev.cid.contact -i cora.dev.cid.contact --id-only | wc -l
+     405
+$ ipni provider --all -i alva.dev.cid.contact --id-only | wc -l
+     209
+> ipni provider --all -i cora.dev.cid.contact --id-only | wc -l
+     196
+```
 
 ### `spaddr`
 - Get p2p ID and multiaddrs of storage provider identified by storage provider ID "t01000":
