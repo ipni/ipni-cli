@@ -188,16 +188,6 @@ func listProviders(cctx *cli.Context, peerIDs []peer.ID) error {
 		return err
 	}
 
-	/*
-		cl, err := client.New(cctx.String("indexer"))
-		if err != nil {
-			return err
-		}
-		provs, err := cl.ListProviders(cctx.Context)
-		if err != nil {
-			return err
-		}
-	*/
 	provs := pc.List()
 	if len(provs) == 0 {
 		fmt.Println("No providers registered with indexer")
