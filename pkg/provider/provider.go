@@ -10,8 +10,8 @@ import (
 
 	"github.com/ipfs/go-cid"
 	"github.com/ipni/go-libipni/apierror"
-	"github.com/ipni/go-libipni/find/client"
 	"github.com/ipni/go-libipni/find/model"
+	"github.com/ipni/go-libipni/pcache"
 	"github.com/ipni/ipni-cli/pkg/adpub"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/mattn/go-isatty"
@@ -21,7 +21,7 @@ import (
 var ProviderCmd = &cli.Command{
 	Name:  "provider",
 	Usage: "Show information about providers known to an indexer.",
-	Description: `Get information about one or more providers from the specified indexer. An optional --distance flag will calculate the distance from the last seen advertisement to the provider's current head advertisement.
+	Description: `Get information about one or more providers from the specified indexer(s). An optional --distance flag calculates the distance from the last seen advertisement to the provider's current head advertisement.
 
 The --invert flag inverts the selection of providers, and shows all that are not specified. This can be used to filter out provideres from the returned list.
 
@@ -34,12 +34,11 @@ Here is an example that shows using the output of one provider command to filter
 }
 
 var providerFlags = []cli.Flag{
-	&cli.StringFlag{
+	&cli.StringSliceFlag{
 		Name:    "indexer",
-		Usage:   "Indexer URL",
-		EnvVars: []string{"INDEXER"},
+		Usage:   "Indexer URL. Specifying multiple results in a unified view of providers across all.",
 		Aliases: []string{"i"},
-		Value:   "http://localhost:3000",
+		Value:   cli.NewStringSlice("http://localhost:3000"),
 	},
 	&cli.StringSliceFlag{
 		Name:  "pid",
@@ -121,18 +120,24 @@ func providerAction(cctx *cli.Context) error {
 		peerIDs = append(peerIDs, peerID)
 	}
 
-	cl, err := client.New(cctx.String("indexer"))
-	if err != nil {
-		return err
-	}
-
 	if cctx.Bool("invert") {
 		return listProviders(cctx, peerIDs)
 	}
 
+	var pc *pcache.ProviderCache
+	var err error
+	if len(peerIDs) > 1 {
+		pc, err = pcache.New(pcache.WithSourceURL(cctx.StringSlice("indexer")...))
+	} else {
+		pc, err = pcache.New(pcache.WithPreload(false), pcache.WithSourceURL(cctx.StringSlice("indexer")...))
+	}
+	if err != nil {
+		return err
+	}
+
 	var errCount int
 	for _, peerID := range peerIDs {
-		err = getProvider(cctx, cl, peerID)
+		err = getProvider(cctx, pc, peerID)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error getting provider %s: %s\n", peerID, err)
 			errCount++
@@ -145,8 +150,8 @@ func providerAction(cctx *cli.Context) error {
 	return nil
 }
 
-func getProvider(cctx *cli.Context, cl *client.Client, peerID peer.ID) error {
-	prov, err := cl.GetProvider(cctx.Context, peerID)
+func getProvider(cctx *cli.Context, pc *pcache.ProviderCache, peerID peer.ID) error {
+	prov, err := pc.Get(cctx.Context, peerID)
 	if err != nil {
 		var ae *apierror.Error
 		if errors.As(err, &ae) && ae.Status() == http.StatusNotFound {
@@ -168,27 +173,22 @@ func getProvider(cctx *cli.Context, cl *client.Client, peerID peer.ID) error {
 }
 
 func countProviders(cctx *cli.Context) error {
-	cl, err := client.New(cctx.String("indexer"))
+	pcache, err := pcache.New(pcache.WithSourceURL(cctx.StringSlice("indexer")...))
 	if err != nil {
 		return err
 	}
-	provs, err := cl.ListProviders(cctx.Context)
-	if err != nil {
-		return err
-	}
+	provs := pcache.List()
 	fmt.Println(len(provs))
 	return nil
 }
 
 func listProviders(cctx *cli.Context, peerIDs []peer.ID) error {
-	cl, err := client.New(cctx.String("indexer"))
+	pc, err := pcache.New(pcache.WithSourceURL(cctx.StringSlice("indexer")...))
 	if err != nil {
 		return err
 	}
-	provs, err := cl.ListProviders(cctx.Context)
-	if err != nil {
-		return err
-	}
+
+	provs := pc.List()
 	if len(provs) == 0 {
 		fmt.Println("No providers registered with indexer")
 		return nil
