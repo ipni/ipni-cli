@@ -241,8 +241,8 @@ func showProviderInfo(cctx *cli.Context, pinfo *model.ProviderInfo) {
 	}
 	fmt.Println("    LastAdvertisement:", adCidStr)
 	fmt.Println("    LastAdvertisementTime:", timeStr)
-	if adCidStr != "" {
-		fmt.Println("    Lag:", pinfo.Lag)
+	if adCidStr != "" && pinfo.Lag != 0 {
+		fmt.Println("    Sync-in-progress lag:", pinfo.Lag)
 	}
 	if pinfo.Publisher != nil {
 		fmt.Println("    Publisher:", pinfo.Publisher.ID)
@@ -269,7 +269,7 @@ func showProviderInfo(cctx *cli.Context, pinfo *model.ProviderInfo) {
 
 	if cctx.Bool("distance") {
 		fmt.Print("    Distance to head advertisement: ")
-		dist, err := getLastSeenDistance(cctx, pinfo)
+		dist, _, err := getLastSeenDistance(cctx, pinfo)
 		if err != nil {
 			fmt.Println("error:", err)
 		} else {
@@ -280,16 +280,16 @@ func showProviderInfo(cctx *cli.Context, pinfo *model.ProviderInfo) {
 	fmt.Println()
 }
 
-func getLastSeenDistance(cctx *cli.Context, pinfo *model.ProviderInfo) (int, error) {
+func getLastSeenDistance(cctx *cli.Context, pinfo *model.ProviderInfo) (int, cid.Cid, error) {
 	if pinfo.Publisher == nil {
-		return 0, errors.New("no publisher listed")
+		return 0, cid.Undef, errors.New("no publisher listed")
 	}
 	if !pinfo.LastAdvertisement.Defined() {
-		return 0, errors.New("no last advertisement")
+		return 0, cid.Undef, errors.New("no last advertisement")
 	}
 	pubClient, err := adpub.NewClient(*pinfo.Publisher)
 	if err != nil {
-		return 0, err
+		return 0, cid.Undef, err
 	}
 	return pubClient.Distance(cctx.Context, pinfo.LastAdvertisement, cid.Undef)
 }

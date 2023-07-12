@@ -63,7 +63,7 @@ func adsDistAction(cctx *cli.Context) error {
 		endStr = "head"
 	}
 
-	adCount, err := provClient.Distance(cctx.Context, startCid, endCid)
+	adCount, _, err := provClient.Distance(cctx.Context, startCid, endCid)
 	if err != nil {
 		return err
 	}
