@@ -25,7 +25,7 @@ import (
 type Client interface {
 	GetAdvertisement(context.Context, cid.Cid) (*Advertisement, error)
 	Close() error
-	Distance(context.Context, cid.Cid, cid.Cid) (int, error)
+	Distance(context.Context, cid.Cid, cid.Cid) (int, cid.Cid, error)
 	List(context.Context, cid.Cid, int, io.Writer) error
 	SyncEntriesWithRetry(context.Context, cid.Cid) error
 }
@@ -91,22 +91,22 @@ func selectEntriesWithLimit(limit selector.RecursionLimit) datamodel.Node {
 		})).Node()
 }
 
-func (c *client) Distance(ctx context.Context, oldestCid, newestCid cid.Cid) (int, error) {
+func (c *client) Distance(ctx context.Context, oldestCid, newestCid cid.Cid) (int, cid.Cid, error) {
 	if oldestCid == cid.Undef {
-		return 0, errors.New("must specify a oldest CID")
+		return 0, cid.Undef, errors.New("must specify a oldest CID")
 	}
 
 	// Sync the advertisement without entries first.
 	var err error
 	_, err = c.syncAdWithRetry(ctx, oldestCid)
 	if err != nil {
-		return 0, err
+		return 0, cid.Undef, err
 	}
 
 	// Load the synced advertisement from local store.
 	ad, err := c.store.getAdvertisement(ctx, oldestCid)
 	if err != nil {
-		return 0, err
+		return 0, cid.Undef, err
 	}
 
 	// TODO: Allow a maximum depth to be specified for the ad chain.
@@ -124,10 +124,15 @@ func (c *client) Distance(ctx context.Context, oldestCid, newestCid cid.Cid) (in
 
 	newestCid, err = c.sub.Sync(ctx, c.publisher, newestCid, sel)
 	if err != nil {
-		return 0, err
+		return 0, cid.Undef, err
 	}
 
-	return c.store.distance(ctx, oldestCid, newestCid)
+	dist, err := c.store.distance(ctx, oldestCid, newestCid)
+	if err != nil {
+		return 0, cid.Undef, err
+	}
+
+	return dist, newestCid, nil
 }
 
 func (c *client) List(ctx context.Context, latestCid cid.Cid, n int, w io.Writer) error {
