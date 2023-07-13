@@ -669,11 +669,7 @@ func verifyIngest(cctx *cli.Context, find *client.Client, dhFind *client.DHashCl
 		return result, nil
 	}
 
-	if dhFind != nil {
-		fmt.Println("🔒 Reader privacy enabled")
-	}
-
-	if len(response.MultihashResults) == 0 {
+	if response == nil || len(response.MultihashResults) == 0 {
 		result.Absent = mhsCount
 		return result, nil
 	}
@@ -724,6 +720,7 @@ func doDHFind(ctx context.Context, cl *client.DHashClient, mhs []multihash.Multi
 			resp.MultihashResults = append(resp.MultihashResults, r.MultihashResults...)
 		}
 	}
+	fmt.Println("🔒 Reader privacy enabled")
 	return resp, nil
 }
 
