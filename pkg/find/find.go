@@ -25,6 +25,7 @@ var FindCmd = &cli.Command{
 Example usage:
 	ipni find -i cid.contact --cid bafybeigvgzoolc3drupxhlevdp2ugqcrbcsqfmcek2zxiw5wctk3xjpjwy`,
 	Flags:  findFlags,
+	Before: beforeFind,
 	Action: findAction,
 }
 
@@ -41,15 +42,13 @@ var findFlags = []cli.Flag{
 	},
 	&cli.StringSliceFlag{
 		Name:    "indexer",
-		Usage:   "URL of indexer to query. Multiple OK to specify providers info sources.",
+		Usage:   "URL of indexer to query. Multiple OK to specify providers info sources for dhstore.",
 		Aliases: []string{"i"},
-		Value:   cli.NewStringSlice("http://localhost:3000"),
 	},
 	&cli.StringFlag{
-		Name:     "dhstore",
-		Usage:    "URL of double-hashed (reader-private) store, if different from indexer",
-		EnvVars:  []string{"DHSTORE"},
-		Required: false,
+		Name:    "dhstore",
+		Usage:   "URL of double-hashed (reader-private) store, if different from indexer",
+		Aliases: []string{"dhs"},
 	},
 	&cli.BoolFlag{
 		Name:  "id-only",
@@ -63,6 +62,18 @@ var findFlags = []cli.Flag{
 		Name:  "fallback",
 		Usage: "Do non-private query only if the indexer does not support reader-privacy",
 	},
+}
+
+func beforeFind(cctx *cli.Context) error {
+	if len(cctx.StringSlice("indexer")) == 0 {
+		if cctx.Bool("no-priv") {
+			return cli.Exit("missing value for --indexer", 1)
+		}
+		if cctx.String("dhstore") == "" {
+			return cli.Exit("missing value for --dhstore and --indexer", 1)
+		}
+	}
+	return nil
 }
 
 func findAction(cctx *cli.Context) error {
