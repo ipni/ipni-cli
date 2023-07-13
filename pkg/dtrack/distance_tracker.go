@@ -10,7 +10,6 @@ import (
 	"github.com/ipni/go-libipni/pcache"
 	"github.com/ipni/ipni-cli/pkg/adpub"
 	"github.com/libp2p/go-libp2p/core/peer"
-	"github.com/multiformats/go-multiaddr"
 )
 
 type DistanceUpdate struct {
@@ -28,13 +27,11 @@ const (
 )
 
 type distTrack struct {
-	dist      int
-	head      cid.Cid
-	ad        cid.Cid
-	client    adpub.Client
-	publisher peer.AddrInfo
-	err       error
-	errType   int
+	dist    int
+	head    cid.Cid
+	ad      cid.Cid
+	err     error
+	errType int
 }
 
 func RunDistanceTracker(ctx context.Context, include, exclude map[peer.ID]struct{}, provCache *pcache.ProviderCache, updateIn time.Duration) <-chan DistanceUpdate {
@@ -222,16 +219,4 @@ func updateTrack(ctx context.Context, pid peer.ID, track *distTrack, provCache *
 		ID:       pid,
 		Distance: track.dist,
 	}
-}
-
-func maddrsEqual(a, b []multiaddr.Multiaddr) bool {
-	if len(a) != len(b) {
-		return false
-	}
-	for i := range a {
-		if !a[i].Equal(b[i]) {
-			return false
-		}
-	}
-	return true
 }
