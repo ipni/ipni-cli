@@ -724,9 +724,6 @@ func doDHFind(ctx context.Context, cl *client.DHashClient, mhs []multihash.Multi
 			resp.MultihashResults = append(resp.MultihashResults, r.MultihashResults...)
 		}
 	}
-	//if resp == nil && cctx.Bool("fallback") {
-	//	return clearFind(cctx, mhs)
-	//}
 	return resp, nil
 }
 
