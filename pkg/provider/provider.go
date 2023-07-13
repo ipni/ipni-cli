@@ -7,12 +7,14 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/ipfs/go-cid"
 	"github.com/ipni/go-libipni/apierror"
 	"github.com/ipni/go-libipni/find/model"
 	"github.com/ipni/go-libipni/pcache"
 	"github.com/ipni/ipni-cli/pkg/adpub"
+	"github.com/ipni/ipni-cli/pkg/dtrack"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/mattn/go-isatty"
 	"github.com/urfave/cli/v2"
@@ -58,6 +60,11 @@ var providerFlags = []cli.Flag{
 		Usage: "Calculate distance from last seen advertisement to provider's current head advertisement",
 	},
 	&cli.BoolFlag{
+		Name:    "follow-dist",
+		Aliases: []string{"fd"},
+		Usage:   "Continue showing distance updates for providers",
+	},
+	&cli.BoolFlag{
 		Name:  "error",
 		Usage: "Only show providers that have a LastError",
 	},
@@ -68,6 +75,12 @@ var providerFlags = []cli.Flag{
 	&cli.BoolFlag{
 		Name:  "invert",
 		Usage: "Invert selection to show all providers except those specified",
+	},
+	&cli.StringFlag{
+		Name:    "update-interval",
+		Aliases: []string{"ui"},
+		Usage:   "Time to wait between distance update checks. The value is an integer string ending in s, m, h for seconds. minutes, hours. Updates will only be seen as fast as they become visible at the upstream location.",
+		Value:   "2m",
 	},
 }
 
@@ -106,18 +119,13 @@ func providerAction(cctx *cli.Context) error {
 		}
 	}
 
-	peerIDs := make([]peer.ID, 0, len(pids))
-	seen := make(map[string]struct{}, len(pids))
+	peerIDs := make(map[peer.ID]struct{}, len(pids))
 	for _, pid := range pids {
-		if _, ok := seen[pid]; ok {
-			// Skip duplicates.
-			continue
-		}
 		peerID, err := peer.Decode(pid)
 		if err != nil {
 			return fmt.Errorf("invalid peer ID %s: %s", pid, err)
 		}
-		peerIDs = append(peerIDs, peerID)
+		peerIDs[peerID] = struct{}{}
 	}
 
 	if cctx.Bool("invert") {
@@ -137,8 +145,12 @@ func providerAction(cctx *cli.Context) error {
 		return err
 	}
 
+	if cctx.Bool("follow-dist") {
+		return followDistance(cctx, peerIDs, nil, pc)
+	}
+
 	var errCount int
-	for _, peerID := range peerIDs {
+	for peerID := range peerIDs {
 		err = getProvider(cctx, pc, peerID)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error getting provider %s: %s\n", peerID, err)
@@ -149,6 +161,7 @@ func providerAction(cctx *cli.Context) error {
 	if errCount != 0 {
 		return fmt.Errorf("failed to get %d providers", errCount)
 	}
+
 	return nil
 }
 
@@ -185,25 +198,20 @@ func countProviders(cctx *cli.Context) error {
 	return nil
 }
 
-func listProviders(cctx *cli.Context, peerIDs []peer.ID) error {
-	pc, err := pcache.New(pcache.WithRefreshInterval(0),
-		pcache.WithSourceURL(cctx.StringSlice("indexer")...))
+func listProviders(cctx *cli.Context, exclude map[peer.ID]struct{}) error {
+	pc, err := pcache.New(pcache.WithSourceURL(cctx.StringSlice("indexer")...), pcache.WithRefreshInterval(0))
 	if err != nil {
 		return err
+	}
+
+	if cctx.Bool("follow-dist") {
+		return followDistance(cctx, nil, exclude, pc)
 	}
 
 	provs := pc.List()
 	if len(provs) == 0 {
 		fmt.Println("No providers registered with indexer")
 		return nil
-	}
-
-	var exclude map[peer.ID]struct{}
-	if len(peerIDs) != 0 {
-		exclude = make(map[peer.ID]struct{}, len(peerIDs))
-		for _, pid := range peerIDs {
-			exclude[pid] = struct{}{}
-		}
 	}
 
 	if cctx.Bool("id-only") {
@@ -227,6 +235,24 @@ func listProviders(cctx *cli.Context, peerIDs []peer.ID) error {
 		showProviderInfo(cctx, pinfo)
 	}
 
+	return nil
+}
+
+func followDistance(cctx *cli.Context, include, exclude map[peer.ID]struct{}, pc *pcache.ProviderCache) error {
+	trackUpdateIn, err := time.ParseDuration(cctx.String("update-interval"))
+	if err != nil {
+		return err
+	}
+
+	fmt.Fprintln(os.Stderr, "Showing provider distance updates, ctrl-c to cancel...")
+	updates := dtrack.RunDistanceTracker(cctx.Context, include, exclude, pc, trackUpdateIn)
+	for update := range updates {
+		if update.Err != nil {
+			fmt.Fprintln(os.Stderr, "Provider", update.ID, "distance error:", update.Err)
+			continue
+		}
+		fmt.Println("Provider", update.ID, "distance to head advertisement:", update.Distance)
+	}
 	return nil
 }
 
