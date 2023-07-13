@@ -3,6 +3,7 @@ package adpub
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"io"
 
 	"github.com/ipfs/go-cid"
@@ -168,7 +169,7 @@ func (s *ClientStore) getAdvertisement(ctx context.Context, id cid.Cid) (*Advert
 	return a, nil
 }
 
-func (s *ClientStore) distance(ctx context.Context, oldestCid, newestCid cid.Cid) (int, error) {
+func (s *ClientStore) distance(ctx context.Context, oldestCid, newestCid cid.Cid, depthLimit int64) (int, error) {
 	var count int
 	for newestCid != oldestCid {
 		val, err := s.Batching.Get(ctx, datastore.NewKey(newestCid.String()))
@@ -199,6 +200,10 @@ func (s *ClientStore) distance(ctx context.Context, oldestCid, newestCid cid.Cid
 			break
 		}
 		newestCid = ad.PreviousID.(cidlink.Link).Cid
+
+		if count == int(depthLimit) {
+			return 0, fmt.Errorf("exceeded limit %d+", depthLimit)
+		}
 	}
 	return count, nil
 }
@@ -240,4 +245,8 @@ func (s *ClientStore) list(ctx context.Context, nextCid cid.Cid, n int, w io.Wri
 		nextCid = ad.PreviousID.(cidlink.Link).Cid
 	}
 	return nil
+}
+
+func (s *ClientStore) clear() {
+	s.Batching = dssync.MutexWrap(datastore.NewMapDatastore())
 }

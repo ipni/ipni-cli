@@ -25,13 +25,15 @@ import (
 type Client interface {
 	GetAdvertisement(context.Context, cid.Cid) (*Advertisement, error)
 	Close() error
+	ClearStore()
 	Distance(context.Context, cid.Cid, cid.Cid) (int, cid.Cid, error)
 	List(context.Context, cid.Cid, int, io.Writer) error
 	SyncEntriesWithRetry(context.Context, cid.Cid) error
 }
 
 type client struct {
-	entriesDepthLimit selector.RecursionLimit
+	adChainDepthLimit int64
+	entriesDepthLimit int64
 	maxSyncRetry      uint64
 	syncRetryBackoff  time.Duration
 
@@ -72,6 +74,7 @@ func NewClient(addrInfo peer.AddrInfo, options ...Option) (Client, error) {
 		})).Node()
 
 	return &client{
+		adChainDepthLimit: opts.adChainDepthLimit,
 		entriesDepthLimit: opts.entriesDepthLimit,
 		maxSyncRetry:      opts.maxSyncRetry,
 		syncRetryBackoff:  opts.syncRetryBackoff,
@@ -97,8 +100,7 @@ func (c *client) Distance(ctx context.Context, oldestCid, newestCid cid.Cid) (in
 	}
 
 	// Sync the advertisement without entries first.
-	var err error
-	_, err = c.syncAdWithRetry(ctx, oldestCid)
+	_, err := c.syncAdWithRetry(ctx, oldestCid)
 	if err != nil {
 		return 0, cid.Undef, err
 	}
@@ -109,8 +111,12 @@ func (c *client) Distance(ctx context.Context, oldestCid, newestCid cid.Cid) (in
 		return 0, cid.Undef, err
 	}
 
-	// TODO: Allow a maximum depth to be specified for the ad chain.
-	rLimit := selector.RecursionLimitNone()
+	var rLimit selector.RecursionLimit
+	if c.adChainDepthLimit == 0 {
+		rLimit = selector.RecursionLimitNone()
+	} else {
+		rLimit = selector.RecursionLimitDepth(c.adChainDepthLimit)
+	}
 
 	stopAt := cidlink.Link{Cid: ad.PreviousID}
 
@@ -127,7 +133,7 @@ func (c *client) Distance(ctx context.Context, oldestCid, newestCid cid.Cid) (in
 		return 0, cid.Undef, err
 	}
 
-	dist, err := c.store.distance(ctx, oldestCid, newestCid)
+	dist, err := c.store.distance(ctx, oldestCid, newestCid, c.adChainDepthLimit)
 	if err != nil {
 		return 0, cid.Undef, err
 	}
@@ -180,6 +186,9 @@ func (c *client) GetAdvertisement(ctx context.Context, adCid cid.Cid) (*Advertis
 }
 
 func (c *client) syncAdWithRetry(ctx context.Context, adCid cid.Cid) (cid.Cid, error) {
+	if c.maxSyncRetry == 0 {
+		return c.sub.Sync(ctx, c.publisher, adCid, c.adSel)
+	}
 	var attempt uint64
 	var err error
 	for {
@@ -204,7 +213,13 @@ func (c *client) syncAdWithRetry(ctx context.Context, adCid cid.Cid) (cid.Cid, e
 
 func (c *client) SyncEntriesWithRetry(ctx context.Context, id cid.Cid) error {
 	var attempt uint64
-	recurLimit := c.entriesDepthLimit
+	var recurLimit selector.RecursionLimit
+	if c.entriesDepthLimit == 0 {
+		recurLimit = selector.RecursionLimitNone()
+	} else {
+		recurLimit = selector.RecursionLimitDepth(c.entriesDepthLimit)
+	}
+
 	for {
 		sel := selectEntriesWithLimit(recurLimit)
 		_, err := c.sub.Sync(ctx, c.publisher, id, sel)
@@ -249,4 +264,8 @@ func (c *client) findNextMissingChunkLink(ctx context.Context, next cid.Cid) (ci
 
 func (c *client) Close() error {
 	return c.sub.Close()
+}
+
+func (c *client) ClearStore() {
+	c.store.clear()
 }
