@@ -14,8 +14,6 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-var log = logging.Logger("ipni-cli")
-
 func main() {
 	// Disable logging that happens in packages such as data-transfer.
 	_ = logging.SetLogLevel("*", "fatal")
