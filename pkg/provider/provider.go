@@ -127,9 +127,11 @@ func providerAction(cctx *cli.Context) error {
 	var pc *pcache.ProviderCache
 	var err error
 	if len(peerIDs) > 1 {
-		pc, err = pcache.New(pcache.WithSourceURL(cctx.StringSlice("indexer")...))
+		pc, err = pcache.New(pcache.WithRefreshInterval(0),
+			pcache.WithSourceURL(cctx.StringSlice("indexer")...))
 	} else {
-		pc, err = pcache.New(pcache.WithPreload(false), pcache.WithSourceURL(cctx.StringSlice("indexer")...))
+		pc, err = pcache.New(pcache.WithPreload(false), pcache.WithRefreshInterval(0),
+			pcache.WithSourceURL(cctx.StringSlice("indexer")...))
 	}
 	if err != nil {
 		return err
@@ -173,7 +175,8 @@ func getProvider(cctx *cli.Context, pc *pcache.ProviderCache, peerID peer.ID) er
 }
 
 func countProviders(cctx *cli.Context) error {
-	pcache, err := pcache.New(pcache.WithSourceURL(cctx.StringSlice("indexer")...))
+	pcache, err := pcache.New(pcache.WithRefreshInterval(0),
+		pcache.WithSourceURL(cctx.StringSlice("indexer")...))
 	if err != nil {
 		return err
 	}
@@ -183,7 +186,8 @@ func countProviders(cctx *cli.Context) error {
 }
 
 func listProviders(cctx *cli.Context, peerIDs []peer.ID) error {
-	pc, err := pcache.New(pcache.WithSourceURL(cctx.StringSlice("indexer")...))
+	pc, err := pcache.New(pcache.WithRefreshInterval(0),
+		pcache.WithSourceURL(cctx.StringSlice("indexer")...))
 	if err != nil {
 		return err
 	}
@@ -253,7 +257,7 @@ func showProviderInfo(cctx *cli.Context, pinfo *model.ProviderInfo) {
 	if pinfo.FrozenAtTime != "" {
 		fmt.Println("    FrozenAtTime:", pinfo.FrozenAtTime)
 	}
-	fmt.Println("    IndexCount:", pinfo.IndexCount)
+
 	if pinfo.Inactive {
 		fmt.Println("    Inactive: true")
 	}
