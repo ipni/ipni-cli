@@ -75,11 +75,11 @@ ipni ads dist  --ai=/ip4/76.219.232.45/tcp/24001/p2p/12D3KooWPNbkEgjdBNeaCGpsgCr
 ### `find`
 - Ask cid.contact where to find CID `bafybeigvgzoolc3drupxhlevdp2ugqcrbcsqfmcek2zxiw5wctk3xjpjwy`:
 ```sh
-ipni find -i cid.contact --cid bafybeigvgzoolc3drupxhlevdp2ugqcrbcsqfmcek2zxiw5wctk3xjpjwy
+ipni find -i https://cid.contact --cid bafybeigvgzoolc3drupxhlevdp2ugqcrbcsqfmcek2zxiw5wctk3xjpjwy
 ```
 - Ask cid.contact where to find multiple multihashes:
 ```sh
-./ipni find -i cid.contact \
+./ipni find -i https://cid.contact \
     --mh=2Drjgb5kxWdcTNfhfEC8F3Ltk4s16aAgG2aLnXxSdpiGTazLGE \
     --mh=2Drjgb4GmZ3cJGRunHYdHrmtgbmGoDuSMeN42gdU1jSiGmHVmA \
     --mh=2DrjgbJZxQgMTvWDG6ih2SNESWeoabccawmLwuFt1T59joGFxd
@@ -88,30 +88,30 @@ ipni find -i cid.contact --cid bafybeigvgzoolc3drupxhlevdp2ugqcrbcsqfmcek2zxiw5w
 ### `provider`
 - Get all providers known by the indexer dev.cid.contact:
 ```
-ipni provider -i dev.cid.contact --all
+ipni provider -i https://dev.cid.contact --all
 ```
 - Get information about the provider with ID `QmQzqxhK82kAmKvARFZSkUVS6fo9sySaiogAnx5EnZ6ZmC`
 ```
-ipni provider -i cid.contact -pid QmQzqxhK82kAmKvARFZSkUVS6fo9sySaiogAnx5EnZ6ZmC
+ipni provider -i https://cid.contact -pid QmQzqxhK82kAmKvARFZSkUVS6fo9sySaiogAnx5EnZ6ZmC
 ```
 ```
-echo QmQzqxhK82kAmKvARFZSkUVS6fo9sySaiogAnx5EnZ6ZmC | ipni provider -i cid.contact
+echo QmQzqxhK82kAmKvARFZSkUVS6fo9sySaiogAnx5EnZ6ZmC | ipni provider -i https://cid.contact
 ```
 - Get information about the providers returned from find results:
 ```sh
-ipni find -i cid.contact --cid bafybeigvgzoolc3drupxhlevdp2ugqcrbcsqfmcek2zxiw5wctk3xjpjwy --id-only | ipni provider -i cid.contact
+ipni find -i https://cid.contact --cid bafybeigvgzoolc3drupxhlevdp2ugqcrbcsqfmcek2zxiw5wctk3xjpjwy --id-only | ipni provider -i https://cid.contact
 ```
 - See which providers cid.contact knows about that dev.cid.contact does not:
 ```sh 
-ipni provider --all -i dev.cid.contact -id | ipni provider -invert -i cid.contact -id
+ipni provider --all -i https://dev.cid.contact -id | ipni provider -invert -i https://cid.contact -id
 ```
 - Get combined information from multiple providers:
 ```
-$ ipni provider --all -i alva.dev.cid.contact -i cora.dev.cid.contact --id-only | wc -l
+$ ipni provider --all -i https://alva.dev.cid.contact -i https://cora.dev.cid.contact --id-only | wc -l
      405
-$ ipni provider --all -i alva.dev.cid.contact --id-only | wc -l
+$ ipni provider --all -i https://alva.dev.cid.contact --id-only | wc -l
      209
-> ipni provider --all -i cora.dev.cid.contact --id-only | wc -l
+> ipni provider --all -i https://cora.dev.cid.contact --id-only | wc -l
      196
 ```
 
@@ -124,7 +124,7 @@ $ ipni provider --all -i alva.dev.cid.contact --id-only | wc -l
 ### `verify ingest`
 - Verfy ingestion at cid.contact, of multihashes 
 ```
-./ipni verify ingest -i cid.contact \
+./ipni verify ingest -i https://cid.contact \
     --ad-cid=baguqeerank3iclae2u4lin3vj2avuory3ny67tldh2cd5uodsgsdl6uawz3a \
     --provider-id=12D3KooWPNbkEgjdBNeaCGpsgCrPRETe4uBZf1ShFXStobdN18ys \
     --batch-size=25 \

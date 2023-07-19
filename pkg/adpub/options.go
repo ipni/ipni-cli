@@ -4,12 +4,16 @@ import (
 	"errors"
 	"fmt"
 	"time"
+)
 
-	"github.com/ipld/go-ipld-prime/traversal/selector"
+const (
+	defaultAdChainDepthLimit = 10000
+	defaultEntriesDepthLimit = 1000
 )
 
 type config struct {
-	entriesDepthLimit selector.RecursionLimit
+	adChainDepthLimit int64
+	entriesDepthLimit int64
 	maxSyncRetry      uint64
 	syncRetryBackoff  time.Duration
 	topic             string
@@ -21,9 +25,9 @@ type Option func(*config) error
 // getOpts creates a config and applies Options to it.
 func getOpts(opts []Option) (config, error) {
 	cfg := config{
-		entriesDepthLimit: selector.RecursionLimitNone(),
+		adChainDepthLimit: defaultAdChainDepthLimit,
+		entriesDepthLimit: defaultEntriesDepthLimit,
 		topic:             "/indexer/ingest/mainnet",
-		maxSyncRetry:      3,
 		syncRetryBackoff:  500 * time.Millisecond,
 	}
 
@@ -33,6 +37,18 @@ func getOpts(opts []Option) (config, error) {
 		}
 	}
 	return cfg, nil
+}
+
+// WithAdChainDepthLimit sets the depth limit when syncing an advertisement
+// chain. Setting to 0 means no limit.
+func WithAdChainDepthLimit(limit int64) Option {
+	return func(c *config) error {
+		if limit < 0 {
+			return errors.New("ad chain depth limit cannot be negative")
+		}
+		c.adChainDepthLimit = limit
+		return nil
+	}
 }
 
 // WithSyncRetryBackoff sets the length of time to wait before retrying a faild
@@ -69,11 +85,7 @@ func WithEntriesDepthLimit(depthLimit int64) Option {
 		if depthLimit < 0 {
 			return errors.New("ad entries depth limit cannot be negative")
 		}
-		if depthLimit == 0 {
-			c.entriesDepthLimit = selector.RecursionLimitNone()
-		} else {
-			c.entriesDepthLimit = selector.RecursionLimitDepth(depthLimit)
-		}
+		c.entriesDepthLimit = depthLimit
 		return nil
 	}
 }

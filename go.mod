@@ -6,9 +6,10 @@ require (
 	github.com/filecoin-project/go-address v1.1.0
 	github.com/ipfs/go-cid v0.4.1
 	github.com/ipfs/go-datastore v0.6.0
+	github.com/ipfs/go-log/v2 v2.5.1
 	github.com/ipld/go-car/v2 v2.10.0
 	github.com/ipld/go-ipld-prime v0.20.0
-	github.com/ipni/go-libipni v0.2.10
+	github.com/ipni/go-libipni v0.2.12
 	github.com/libp2p/go-libp2p v0.28.1
 	github.com/mattn/go-isatty v0.0.19
 	github.com/montanaflynn/stats v0.7.0
@@ -74,7 +75,6 @@ require (
 	github.com/ipfs/go-ipld-legacy v0.1.1 // indirect
 	github.com/ipfs/go-libipfs v0.6.2 // indirect
 	github.com/ipfs/go-log v1.0.5 // indirect
-	github.com/ipfs/go-log/v2 v2.5.1 // indirect
 	github.com/ipfs/go-merkledag v0.10.0 // indirect
 	github.com/ipfs/go-metrics-interface v0.0.1 // indirect
 	github.com/ipfs/go-peertaskqueue v0.8.1 // indirect

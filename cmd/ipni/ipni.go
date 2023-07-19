@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 
+	logging "github.com/ipfs/go-log/v2"
 	"github.com/ipni/ipni-cli"
 	"github.com/ipni/ipni-cli/pkg/ads"
 	"github.com/ipni/ipni-cli/pkg/find"
@@ -14,6 +15,9 @@ import (
 )
 
 func main() {
+	// Disable logging that happens in packages such as data-transfer.
+	_ = logging.SetLogLevel("*", "fatal")
+
 	app := &cli.App{
 		Name:    "ipni",
 		Usage:   "Commands to interact with IPNI indexers and index providers",
