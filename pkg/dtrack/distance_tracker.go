@@ -22,6 +22,7 @@ const (
 	errTypeNone = iota
 	errTypeNoPublisher
 	errTypeNoSync
+	errTypeNotFound
 	errTypePubClient
 	errTypeUpdate
 )
@@ -34,14 +35,14 @@ type distTrack struct {
 	errType int
 }
 
-func RunDistanceTracker(ctx context.Context, include, exclude map[peer.ID]struct{}, provCache *pcache.ProviderCache, updateIn time.Duration) <-chan DistanceUpdate {
+func RunDistanceTracker(ctx context.Context, include, exclude map[peer.ID]struct{}, provCache *pcache.ProviderCache, depthLimit int64, updateIn time.Duration) <-chan DistanceUpdate {
 	updates := make(chan DistanceUpdate)
-	go runTracker(ctx, include, exclude, provCache, updateIn, updates)
+	go runTracker(ctx, include, exclude, provCache, updateIn, depthLimit, updates)
 
 	return updates
 }
 
-func runTracker(ctx context.Context, include, exclude map[peer.ID]struct{}, provCache *pcache.ProviderCache, updateIn time.Duration, updates chan<- DistanceUpdate) {
+func runTracker(ctx context.Context, include, exclude map[peer.ID]struct{}, provCache *pcache.ProviderCache, updateIn time.Duration, depthLimit int64, updates chan<- DistanceUpdate) {
 	defer close(updates)
 
 	var lookForNew bool
@@ -78,7 +79,7 @@ func runTracker(ctx context.Context, include, exclude map[peer.ID]struct{}, prov
 					}
 				}
 			}
-			updateTracks(ctx, provCache, tracks, updates)
+			updateTracks(ctx, provCache, tracks, depthLimit, updates)
 			timer.Reset(updateIn)
 		case <-ctx.Done():
 			return
@@ -86,21 +87,33 @@ func runTracker(ctx context.Context, include, exclude map[peer.ID]struct{}, prov
 	}
 }
 
-func updateTracks(ctx context.Context, provCache *pcache.ProviderCache, tracks map[peer.ID]*distTrack, updates chan<- DistanceUpdate) {
+func updateTracks(ctx context.Context, provCache *pcache.ProviderCache, tracks map[peer.ID]*distTrack, depthLimit int64, updates chan<- DistanceUpdate) {
 	var wg sync.WaitGroup
 	for providerID, dtrack := range tracks {
 		wg.Add(1)
 		go func(pid peer.ID, track *distTrack) {
-			updateTrack(ctx, pid, track, provCache, updates)
+			updateTrack(ctx, pid, track, provCache, depthLimit, updates)
 			wg.Done()
 		}(providerID, dtrack)
 	}
 	wg.Wait()
 }
 
-func updateTrack(ctx context.Context, pid peer.ID, track *distTrack, provCache *pcache.ProviderCache, updates chan<- DistanceUpdate) {
+func updateTrack(ctx context.Context, pid peer.ID, track *distTrack, provCache *pcache.ProviderCache, depthLimit int64, updates chan<- DistanceUpdate) {
 	pinfo, err := provCache.Get(ctx, pid)
 	if err != nil {
+		return
+	}
+
+	if pinfo == nil {
+		if track.errType != errTypeNotFound {
+			track.errType = errTypeNotFound
+			track.err = fmt.Errorf("provider info not found")
+			updates <- DistanceUpdate{
+				ID:  pid,
+				Err: track.err,
+			}
+		}
 		return
 	}
 
@@ -128,7 +141,7 @@ func updateTrack(ctx context.Context, pid peer.ID, track *distTrack, provCache *
 		return
 	}
 
-	pubClient, err := adpub.NewClient(*pinfo.Publisher)
+	pubClient, err := adpub.NewClient(*pinfo.Publisher, adpub.WithAdChainDepthLimit(depthLimit))
 	if err != nil {
 		if track.errType != errTypePubClient {
 			track.errType = errTypePubClient

@@ -37,10 +37,10 @@ Here is an example that shows using the output of one provider command to filter
 
 var providerFlags = []cli.Flag{
 	&cli.StringSliceFlag{
-		Name:    "indexer",
-		Usage:   "Indexer URL. Specifying multiple results in a unified view of providers across all.",
-		Aliases: []string{"i"},
-		Value:   cli.NewStringSlice("http://localhost:3000"),
+		Name:     "indexer",
+		Usage:    "Indexer URL. Specifying multiple results in a unified view of providers across all.",
+		Aliases:  []string{"i"},
+		Required: true,
 	},
 	&cli.StringSliceFlag{
 		Name:  "pid",
@@ -81,6 +81,12 @@ var providerFlags = []cli.Flag{
 		Aliases: []string{"ui"},
 		Usage:   "Time to wait between distance update checks. The value is an integer string ending in s, m, h for seconds. minutes, hours. Updates will only be seen as fast as they become visible at the upstream location.",
 		Value:   "2m",
+	},
+	&cli.Int64Flag{
+		Name:    "ad-depth-limit",
+		Aliases: []string{"adl"},
+		Usage:   "Limit on number of advertisements when finding distance. 0 for unlimited.",
+		Value:   5000,
 	},
 }
 
@@ -245,7 +251,7 @@ func followDistance(cctx *cli.Context, include, exclude map[peer.ID]struct{}, pc
 	}
 
 	fmt.Fprintln(os.Stderr, "Showing provider distance updates, ctrl-c to cancel...")
-	updates := dtrack.RunDistanceTracker(cctx.Context, include, exclude, pc, trackUpdateIn)
+	updates := dtrack.RunDistanceTracker(cctx.Context, include, exclude, pc, cctx.Int64("ad-depth-limit"), trackUpdateIn)
 	for update := range updates {
 		if update.Err != nil {
 			fmt.Fprintln(os.Stderr, "Provider", update.ID, "distance error:", update.Err)
@@ -313,7 +319,7 @@ func getLastSeenDistance(cctx *cli.Context, pinfo *model.ProviderInfo) (int, cid
 	if !pinfo.LastAdvertisement.Defined() {
 		return 0, cid.Undef, errors.New("no last advertisement")
 	}
-	pubClient, err := adpub.NewClient(*pinfo.Publisher)
+	pubClient, err := adpub.NewClient(*pinfo.Publisher, adpub.WithAdChainDepthLimit(cctx.Int64("ad-depth-limit")))
 	if err != nil {
 		return 0, cid.Undef, err
 	}

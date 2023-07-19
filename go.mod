@@ -9,7 +9,7 @@ require (
 	github.com/ipfs/go-log/v2 v2.5.1
 	github.com/ipld/go-car/v2 v2.10.0
 	github.com/ipld/go-ipld-prime v0.20.0
-	github.com/ipni/go-libipni v0.2.10
+	github.com/ipni/go-libipni v0.2.12
 	github.com/libp2p/go-libp2p v0.28.1
 	github.com/mattn/go-isatty v0.0.19
 	github.com/montanaflynn/stats v0.7.0

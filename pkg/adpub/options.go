@@ -7,7 +7,7 @@ import (
 )
 
 const (
-	defaultAdChainDepthLimit = 50000
+	defaultAdChainDepthLimit = 10000
 	defaultEntriesDepthLimit = 1000
 )
 
