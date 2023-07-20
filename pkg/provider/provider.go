@@ -66,7 +66,7 @@ var providerFlags = []cli.Flag{
 	},
 	&cli.BoolFlag{
 		Name:  "error",
-		Usage: "Only show providers that have a LastError",
+		Usage: "Only show providers that have a LastError. If --count then show count of providers with LastError.",
 	},
 	&cli.BoolFlag{
 		Name:  "id-only",
@@ -200,6 +200,18 @@ func countProviders(cctx *cli.Context) error {
 		return err
 	}
 	provs := pcache.List()
+
+	if cctx.Bool("error") {
+		var count int
+		for _, pinfo := range provs {
+			if pinfo.LastError != "" {
+				count++
+			}
+		}
+		fmt.Println(count)
+		return nil
+	}
+
 	fmt.Println(len(provs))
 	return nil
 }
