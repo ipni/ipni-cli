@@ -99,18 +99,6 @@ func (c *client) Distance(ctx context.Context, oldestCid, newestCid cid.Cid) (in
 		return 0, cid.Undef, errors.New("must specify a oldest CID")
 	}
 
-	// Sync the advertisement without entries first.
-	_, err := c.syncAdWithRetry(ctx, oldestCid)
-	if err != nil {
-		return 0, cid.Undef, err
-	}
-
-	// Load the synced advertisement from local store.
-	ad, err := c.store.getAdvertisement(ctx, oldestCid)
-	if err != nil {
-		return 0, cid.Undef, err
-	}
-
 	var rLimit selector.RecursionLimit
 	if c.adChainDepthLimit == 0 {
 		rLimit = selector.RecursionLimitNone()
@@ -118,7 +106,7 @@ func (c *client) Distance(ctx context.Context, oldestCid, newestCid cid.Cid) (in
 		rLimit = selector.RecursionLimitDepth(c.adChainDepthLimit)
 	}
 
-	stopAt := cidlink.Link{Cid: ad.PreviousID}
+	stopAt := cidlink.Link{Cid: oldestCid}
 
 	ssb := builder.NewSelectorSpecBuilder(basicnode.Prototype.Any)
 	adSeqSel := ssb.ExploreFields(
@@ -128,7 +116,7 @@ func (c *client) Distance(ctx context.Context, oldestCid, newestCid cid.Cid) (in
 
 	sel := dagsync.ExploreRecursiveWithStopNode(rLimit, adSeqSel, stopAt)
 
-	newestCid, err = c.sub.Sync(ctx, c.publisher, newestCid, sel)
+	newestCid, err := c.sub.Sync(ctx, c.publisher, newestCid, sel)
 	if err != nil {
 		return 0, cid.Undef, err
 	}
