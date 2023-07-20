@@ -9,7 +9,9 @@ This project provides a command line utility to access IPNI indexers and index-p
 ## Install
 
 ```sh
-go install github.com/ipni/ipni-cli/cmd/ipni@latest
+git clone https://github.com/ipni/ipni-cli.git
+cd ipni-cli
+go install ./cmd/ipni
 ```
 
 This will install the `ipni` command into `$GOPATH/bin/`
