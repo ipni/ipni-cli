@@ -201,7 +201,7 @@ func (s *ClientStore) distance(ctx context.Context, oldestCid, newestCid cid.Cid
 		}
 		newestCid = ad.PreviousID.(cidlink.Link).Cid
 
-		if count == int(depthLimit) {
+		if depthLimit != 0 && count == int(depthLimit) {
 			return 0, fmt.Errorf("exceeded limit %d+", depthLimit)
 		}
 	}
