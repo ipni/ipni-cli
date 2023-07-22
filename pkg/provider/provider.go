@@ -232,9 +232,14 @@ func listProviders(cctx *cli.Context, exclude map[peer.ID]struct{}) error {
 		return nil
 	}
 
+	onlyWithError := cctx.Bool("error")
+
 	if cctx.Bool("id-only") {
 		for _, pinfo := range provs {
 			if _, ok := exclude[pinfo.AddrInfo.ID]; ok {
+				continue
+			}
+			if onlyWithError && pinfo.LastError == "" {
 				continue
 			}
 			fmt.Println(pinfo.AddrInfo.ID)
@@ -242,7 +247,6 @@ func listProviders(cctx *cli.Context, exclude map[peer.ID]struct{}) error {
 		return nil
 	}
 
-	onlyWithError := cctx.Bool("error")
 	for _, pinfo := range provs {
 		if _, ok := exclude[pinfo.AddrInfo.ID]; ok {
 			continue
