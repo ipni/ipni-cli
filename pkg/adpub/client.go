@@ -62,7 +62,7 @@ func NewClient(addrInfo peer.AddrInfo, options ...Option) (Client, error) {
 	h.Peerstore().AddAddrs(addrInfo.ID, addrInfo.Addrs, time.Hour)
 
 	store := newClientStore()
-	sub, err := dagsync.NewSubscriber(h, store.Batching, store.LinkSystem, opts.topic, nil)
+	sub, err := dagsync.NewSubscriber(h, store.Batching, store.LinkSystem, opts.topic)
 	if err != nil {
 		return nil, err
 	}
