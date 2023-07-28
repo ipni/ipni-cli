@@ -3,7 +3,6 @@ package dtrack
 import (
 	"context"
 	"fmt"
-	"sync"
 	"time"
 
 	"github.com/ipfs/go-cid"
@@ -88,15 +87,9 @@ func runTracker(ctx context.Context, include, exclude map[peer.ID]struct{}, prov
 }
 
 func updateTracks(ctx context.Context, provCache *pcache.ProviderCache, tracks map[peer.ID]*distTrack, depthLimit int64, updates chan<- DistanceUpdate) {
-	var wg sync.WaitGroup
-	for providerID, dtrack := range tracks {
-		wg.Add(1)
-		go func(pid peer.ID, track *distTrack) {
-			updateTrack(ctx, pid, track, provCache, depthLimit, updates)
-			wg.Done()
-		}(providerID, dtrack)
+	for providerID, track := range tracks {
+		updateTrack(ctx, providerID, track, provCache, depthLimit, updates)
 	}
-	wg.Wait()
 }
 
 func updateTrack(ctx context.Context, pid peer.ID, track *distTrack, provCache *pcache.ProviderCache, depthLimit int64, updates chan<- DistanceUpdate) {
