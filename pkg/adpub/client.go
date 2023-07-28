@@ -11,6 +11,7 @@ import (
 
 	"github.com/ipfs/go-cid"
 	"github.com/ipfs/go-datastore"
+	dssync "github.com/ipfs/go-datastore/sync"
 	"github.com/ipld/go-ipld-prime"
 	"github.com/ipld/go-ipld-prime/datamodel"
 	cidlink "github.com/ipld/go-ipld-prime/linking/cid"
@@ -19,6 +20,7 @@ import (
 	"github.com/ipld/go-ipld-prime/traversal/selector/builder"
 	"github.com/ipni/go-libipni/dagsync"
 	"github.com/libp2p/go-libp2p"
+	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/libp2p/go-libp2p/core/peer"
 )
 
@@ -44,6 +46,9 @@ type client struct {
 
 	// adSel is the selector for a single advertisement.
 	adSel ipld.Node
+
+	host  host.Host
+	topic string
 }
 
 var ErrContentNotFound = errors.New("content not found at publisher")
@@ -83,6 +88,9 @@ func NewClient(addrInfo peer.AddrInfo, options ...Option) (Client, error) {
 		publisher: addrInfo,
 		store:     store,
 		adSel:     adSel,
+
+		host:  h,
+		topic: opts.topic,
 	}, nil
 }
 
@@ -103,7 +111,7 @@ func (c *client) Distance(ctx context.Context, oldestCid, newestCid cid.Cid) (in
 	if c.adChainDepthLimit == 0 {
 		rLimit = selector.RecursionLimitNone()
 	} else {
-		rLimit = selector.RecursionLimitDepth(c.adChainDepthLimit)
+		rLimit = selector.RecursionLimitDepth(c.adChainDepthLimit + 1)
 	}
 
 	stopAt := cidlink.Link{Cid: oldestCid}
@@ -116,14 +124,21 @@ func (c *client) Distance(ctx context.Context, oldestCid, newestCid cid.Cid) (in
 
 	sel := dagsync.ExploreRecursiveWithStopNode(rLimit, adSeqSel, stopAt)
 
-	newestCid, err := c.sub.Sync(ctx, c.publisher, newestCid, sel)
+	// Create a linksystem that only counts, and does not store data.
+	cs := newCountStore()
+	gsds := dssync.MutexWrap(datastore.NewMapDatastore())
+	sub, err := dagsync.NewSubscriber(c.host, gsds, cs.LinkSystem, c.topic)
+	if err != nil {
+		return 0, cid.Undef, err
+	}
+	newestCid, err = sub.Sync(ctx, c.publisher, newestCid, sel)
 	if err != nil {
 		return 0, cid.Undef, err
 	}
 
-	dist, err := c.store.distance(ctx, oldestCid, newestCid, c.adChainDepthLimit)
-	if err != nil {
-		return 0, cid.Undef, err
+	dist := cs.distance()
+	if int64(dist) > c.adChainDepthLimit {
+		dist = -1
 	}
 
 	return dist, newestCid, nil

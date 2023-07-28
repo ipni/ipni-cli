@@ -172,7 +172,9 @@ func updateTrack(ctx context.Context, pid peer.ID, track *distTrack, provCache *
 		track.errType = errTypeNone
 		track.ad = pinfo.LastAdvertisement
 		track.dist = dist
-		track.head = head
+		if dist != -1 {
+			track.head = head
+		}
 		updates <- DistanceUpdate{
 			ID:       pid,
 			Distance: dist,
@@ -197,6 +199,15 @@ func updateTrack(ctx context.Context, pid peer.ID, track *distTrack, provCache *
 	}
 	track.err = nil
 	track.errType = errTypeNone
+	if dist == -1 {
+		track.dist = -1
+		track.head = cid.Undef
+		updates <- DistanceUpdate{
+			ID:       pid,
+			Distance: -1,
+		}
+		return
+	}
 	if head != track.head {
 		track.dist += dist
 		track.head = head
@@ -219,6 +230,15 @@ func updateTrack(ctx context.Context, pid peer.ID, track *distTrack, provCache *
 		}
 		track.err = nil
 		track.errType = errTypeNone
+		if dist == -1 {
+			track.dist = -1
+			track.head = cid.Undef
+			updates <- DistanceUpdate{
+				ID:       pid,
+				Distance: -1,
+			}
+			return
+		}
 		track.ad = pinfo.LastAdvertisement
 		track.dist -= dist
 		updated = true

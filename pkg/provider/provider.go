@@ -267,13 +267,20 @@ func followDistance(cctx *cli.Context, include, exclude map[peer.ID]struct{}, pc
 	}
 
 	fmt.Fprintln(os.Stderr, "Showing provider distance updates, ctrl-c to cancel...")
-	updates := dtrack.RunDistanceTracker(cctx.Context, include, exclude, pc, cctx.Int64("ad-depth-limit"), trackUpdateIn)
+	limit := cctx.Int64("ad-depth-limit")
+	updates := dtrack.RunDistanceTracker(cctx.Context, include, exclude, pc, limit, trackUpdateIn)
 	for update := range updates {
 		if update.Err != nil {
 			fmt.Fprintln(os.Stderr, "Provider", update.ID, "distance error:", update.Err)
 			continue
 		}
-		fmt.Println("Provider", update.ID, "distance to head advertisement:", update.Distance)
+		var dist string
+		if update.Distance == -1 {
+			dist = fmt.Sprintf("exceeded limit %d+", limit)
+		} else {
+			dist = fmt.Sprintf("%d", update.Distance)
+		}
+		fmt.Println("Provider", update.ID, "distance to head advertisement:", dist)
 	}
 	return nil
 }
@@ -320,6 +327,8 @@ func showProviderInfo(cctx *cli.Context, pinfo *model.ProviderInfo) {
 		dist, _, err := getLastSeenDistance(cctx, pinfo)
 		if err != nil {
 			fmt.Println("error:", err)
+		} else if dist == -1 {
+			fmt.Printf("exceeded limit %d+", cctx.Int64("ad-depth-limit"))
 		} else {
 			fmt.Println(dist)
 		}

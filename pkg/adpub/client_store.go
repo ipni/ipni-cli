@@ -3,7 +3,6 @@ package adpub
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"io"
 
 	"github.com/ipfs/go-cid"
@@ -167,45 +166,6 @@ func (s *ClientStore) getAdvertisement(ctx context.Context, id cid.Cid) (*Advert
 	a.SignerID, a.SigErr = ad.VerifySignature()
 
 	return a, nil
-}
-
-func (s *ClientStore) distance(ctx context.Context, oldestCid, newestCid cid.Cid, depthLimit int64) (int, error) {
-	var count int
-	for newestCid != oldestCid {
-		val, err := s.Batching.Get(ctx, datastore.NewKey(newestCid.String()))
-		if err != nil {
-			return 0, err
-		}
-
-		nb := schema.AdvertisementPrototype.NewBuilder()
-		decoder, err := multicodec.LookupDecoder(newestCid.Prefix().Codec)
-		if err != nil {
-			return 0, err
-		}
-
-		err = decoder(nb, bytes.NewBuffer(val))
-		if err != nil {
-			return 0, err
-		}
-		node := nb.Build()
-
-		ad, err := schema.UnwrapAdvertisement(node)
-		if err != nil {
-			return 0, err
-		}
-
-		count++
-
-		if ad.PreviousID == nil {
-			break
-		}
-		newestCid = ad.PreviousID.(cidlink.Link).Cid
-
-		if depthLimit != 0 && count == int(depthLimit) {
-			return 0, fmt.Errorf("exceeded limit %d+", depthLimit)
-		}
-	}
-	return count, nil
 }
 
 func (s *ClientStore) list(ctx context.Context, nextCid cid.Cid, n int, w io.Writer) error {
