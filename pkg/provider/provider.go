@@ -78,9 +78,15 @@ var providerFlags = []cli.Flag{
 	},
 	&cli.StringFlag{
 		Name:    "update-interval",
-		Aliases: []string{"ui"},
-		Usage:   "Time to wait between distance update checks. The value is an integer string ending in s, m, h for seconds. minutes, hours. Updates will only be seen as fast as they become visible at the upstream location.",
+		Aliases: []string{"uin"},
+		Usage:   "Time to wait between distance update checks when using --follow-dist. The value is an integer string ending in s, m, h for seconds. minutes, hours. Updates will only be seen as fast as they become visible at the upstream location.",
 		Value:   "2m",
+	},
+	&cli.StringFlag{
+		Name:    "update-timeout",
+		Aliases: []string{"uto"},
+		Usage:   "Timeout for getting a provider distance, when using --follow-dist. The value is an integer string ending in s, m, h for seconds. minutes, hours.",
+		Value:   "5m",
 	},
 	&cli.Int64Flag{
 		Name:    "ad-depth-limit",
@@ -266,9 +272,18 @@ func followDistance(cctx *cli.Context, include, exclude map[peer.ID]struct{}, pc
 		return err
 	}
 
+	var timeout time.Duration
+	updateTimeout := cctx.String("update-timeout")
+	if updateTimeout != "" {
+		timeout, err = time.ParseDuration(updateTimeout)
+		if err != nil {
+			return err
+		}
+	}
+
 	fmt.Fprintln(os.Stderr, "Showing provider distance updates, ctrl-c to cancel...")
 	limit := cctx.Int64("ad-depth-limit")
-	updates := dtrack.RunDistanceTracker(cctx.Context, include, exclude, pc, limit, trackUpdateIn)
+	updates := dtrack.RunDistanceTracker(cctx.Context, include, exclude, pc, limit, trackUpdateIn, timeout)
 	for update := range updates {
 		if update.Err != nil {
 			fmt.Fprintln(os.Stderr, "Provider", update.ID, "distance error:", update.Err)

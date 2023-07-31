@@ -34,14 +34,14 @@ type distTrack struct {
 	errType int
 }
 
-func RunDistanceTracker(ctx context.Context, include, exclude map[peer.ID]struct{}, provCache *pcache.ProviderCache, depthLimit int64, updateIn time.Duration) <-chan DistanceUpdate {
+func RunDistanceTracker(ctx context.Context, include, exclude map[peer.ID]struct{}, provCache *pcache.ProviderCache, depthLimit int64, updateIn, timeout time.Duration) <-chan DistanceUpdate {
 	updates := make(chan DistanceUpdate)
-	go runTracker(ctx, include, exclude, provCache, updateIn, depthLimit, updates)
+	go runTracker(ctx, include, exclude, provCache, updateIn, timeout, depthLimit, updates)
 
 	return updates
 }
 
-func runTracker(ctx context.Context, include, exclude map[peer.ID]struct{}, provCache *pcache.ProviderCache, updateIn time.Duration, depthLimit int64, updates chan<- DistanceUpdate) {
+func runTracker(ctx context.Context, include, exclude map[peer.ID]struct{}, provCache *pcache.ProviderCache, updateIn, timeout time.Duration, depthLimit int64, updates chan<- DistanceUpdate) {
 	defer close(updates)
 
 	var lookForNew bool
@@ -78,7 +78,7 @@ func runTracker(ctx context.Context, include, exclude map[peer.ID]struct{}, prov
 					}
 				}
 			}
-			updateTracks(ctx, provCache, tracks, depthLimit, updates)
+			updateTracks(ctx, provCache, tracks, timeout, depthLimit, updates)
 			timer.Reset(updateIn)
 		case <-ctx.Done():
 			return
@@ -86,13 +86,19 @@ func runTracker(ctx context.Context, include, exclude map[peer.ID]struct{}, prov
 	}
 }
 
-func updateTracks(ctx context.Context, provCache *pcache.ProviderCache, tracks map[peer.ID]*distTrack, depthLimit int64, updates chan<- DistanceUpdate) {
+func updateTracks(ctx context.Context, provCache *pcache.ProviderCache, tracks map[peer.ID]*distTrack, timeout time.Duration, depthLimit int64, updates chan<- DistanceUpdate) {
 	for providerID, track := range tracks {
-		updateTrack(ctx, providerID, track, provCache, depthLimit, updates)
+		updateTrack(ctx, providerID, track, provCache, timeout, depthLimit, updates)
 	}
 }
 
-func updateTrack(ctx context.Context, pid peer.ID, track *distTrack, provCache *pcache.ProviderCache, depthLimit int64, updates chan<- DistanceUpdate) {
+func updateTrack(ctx context.Context, pid peer.ID, track *distTrack, provCache *pcache.ProviderCache, timeout time.Duration, depthLimit int64, updates chan<- DistanceUpdate) {
+	if timeout != 0 {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, timeout)
+		defer cancel()
+	}
+
 	pinfo, err := provCache.Get(ctx, pid)
 	if err != nil {
 		return
