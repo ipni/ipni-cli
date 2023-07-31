@@ -27,7 +27,6 @@ import (
 type Client interface {
 	GetAdvertisement(context.Context, cid.Cid) (*Advertisement, error)
 	Close() error
-	ClearStore()
 	Distance(context.Context, cid.Cid, cid.Cid) (int, cid.Cid, error)
 	List(context.Context, cid.Cid, int, io.Writer) error
 	SyncEntriesWithRetry(context.Context, cid.Cid) error
@@ -267,8 +266,4 @@ func (c *client) findNextMissingChunkLink(ctx context.Context, next cid.Cid) (ci
 
 func (c *client) Close() error {
 	return c.sub.Close()
-}
-
-func (c *client) ClearStore() {
-	c.store.clear()
 }

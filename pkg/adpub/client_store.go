@@ -206,7 +206,3 @@ func (s *ClientStore) list(ctx context.Context, nextCid cid.Cid, n int, w io.Wri
 	}
 	return nil
 }
-
-func (s *ClientStore) clear() {
-	s.Batching = dssync.MutexWrap(datastore.NewMapDatastore())
-}
