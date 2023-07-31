@@ -39,8 +39,3 @@ func newCountStore() *CountStore {
 func (s *CountStore) distance() int {
 	return s.count
 }
-
-func (s *CountStore) clear() {
-	s.count = 0
-	panic("hre")
-}
