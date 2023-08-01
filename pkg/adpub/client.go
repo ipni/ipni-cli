@@ -130,6 +130,8 @@ func (c *client) Distance(ctx context.Context, oldestCid, newestCid cid.Cid) (in
 	if err != nil {
 		return 0, cid.Undef, err
 	}
+	defer sub.Close()
+
 	newestCid, err = sub.Sync(ctx, c.publisher, newestCid, sel)
 	if err != nil {
 		return 0, cid.Undef, err
