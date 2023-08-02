@@ -46,8 +46,9 @@ type client struct {
 	// adSel is the selector for a single advertisement.
 	adSel ipld.Node
 
-	host  host.Host
-	topic string
+	host     host.Host
+	ownsHost bool
+	topic    string
 }
 
 var ErrContentNotFound = errors.New("content not found at publisher")
@@ -59,14 +60,19 @@ func NewClient(addrInfo peer.AddrInfo, options ...Option) (Client, error) {
 		return nil, err
 	}
 
-	h, err := libp2p.New()
-	if err != nil {
-		return nil, err
+	var ownsHost bool
+	if opts.p2pHost == nil {
+		opts.p2pHost, err = libp2p.New()
+		if err != nil {
+			return nil, err
+		}
+		ownsHost = true
 	}
-	h.Peerstore().AddAddrs(addrInfo.ID, addrInfo.Addrs, time.Hour)
+
+	opts.p2pHost.Peerstore().AddAddrs(addrInfo.ID, addrInfo.Addrs, time.Hour)
 
 	store := newClientStore()
-	sub, err := dagsync.NewSubscriber(h, store.Batching, store.LinkSystem, opts.topic)
+	sub, err := dagsync.NewSubscriber(opts.p2pHost, store.Batching, store.LinkSystem, opts.topic)
 	if err != nil {
 		return nil, err
 	}
@@ -88,8 +94,9 @@ func NewClient(addrInfo peer.AddrInfo, options ...Option) (Client, error) {
 		store:     store,
 		adSel:     adSel,
 
-		host:  h,
-		topic: opts.topic,
+		host:     opts.p2pHost,
+		ownsHost: ownsHost,
+		topic:    opts.topic,
 	}, nil
 }
 
@@ -267,5 +274,11 @@ func (c *client) findNextMissingChunkLink(ctx context.Context, next cid.Cid) (ci
 }
 
 func (c *client) Close() error {
-	return c.sub.Close()
+	err := c.sub.Close()
+	if c.ownsHost {
+		if err := c.host.Close(); err != nil {
+			return err
+		}
+	}
+	return err
 }
