@@ -23,7 +23,7 @@ var FindCmd = &cli.Command{
 	Description: `The find command queries an indexer, using the supplied CIDs or multihashes as lookup keys, for the storage provider data needed to retrieve the content identified by the keys.
 
 Example usage:
-	ipni find -i cid.contact --cid bafybeigvgzoolc3drupxhlevdp2ugqcrbcsqfmcek2zxiw5wctk3xjpjwy`,
+	ipni find -i https://cid.contact --cid bafybeigvgzoolc3drupxhlevdp2ugqcrbcsqfmcek2zxiw5wctk3xjpjwy`,
 	Flags:  findFlags,
 	Before: beforeFind,
 	Action: findAction,

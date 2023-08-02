@@ -29,7 +29,7 @@ The --invert flag inverts the selection of providers, and shows all that are not
 
 Here is an example that shows using the output of one provider command to filter the output of another, to see which providers cid.contact knows about that dev.cid.contact does not:
 
-    provider --all -i dev.cid.contact -id | provider -invert -i cid.contact -id
+    provider --all -i https://dev.cid.contact -id | provider -invert -i https://cid.contact -id
 `,
 	Flags:  providerFlags,
 	Action: providerAction,
