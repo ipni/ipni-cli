@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"time"
+
+	"github.com/libp2p/go-libp2p/core/host"
 )
 
 const (
@@ -14,6 +16,7 @@ const (
 type config struct {
 	adChainDepthLimit int64
 	entriesDepthLimit int64
+	p2pHost           host.Host
 	maxSyncRetry      uint64
 	syncRetryBackoff  time.Duration
 	topic             string
@@ -65,6 +68,14 @@ func WithSyncRetryBackoff(d time.Duration) Option {
 func WithMaxSyncRetry(r uint64) Option {
 	return func(c *config) error {
 		c.maxSyncRetry = r
+		return nil
+	}
+}
+
+// WithLibp2pHost configures the client to use an existing libp2p host.
+func WithLibp2pHost(h host.Host) Option {
+	return func(c *config) error {
+		c.p2pHost = h
 		return nil
 	}
 }

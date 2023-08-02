@@ -8,6 +8,8 @@ import (
 	"github.com/ipfs/go-cid"
 	"github.com/ipni/go-libipni/pcache"
 	"github.com/ipni/ipni-cli/pkg/adpub"
+	"github.com/libp2p/go-libp2p"
+	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/libp2p/go-libp2p/core/peer"
 )
 
@@ -34,25 +36,54 @@ type distTrack struct {
 	errType int
 }
 
-func RunDistanceTracker(ctx context.Context, include, exclude map[peer.ID]struct{}, provCache *pcache.ProviderCache, depthLimit int64, updateIn, timeout time.Duration) <-chan DistanceUpdate {
-	updates := make(chan DistanceUpdate)
-	go runTracker(ctx, include, exclude, provCache, updateIn, timeout, depthLimit, updates)
-
-	return updates
+type tracker struct {
+	p2pHost    host.Host
+	include    map[peer.ID]struct{}
+	exclude    map[peer.ID]struct{}
+	pcache     *pcache.ProviderCache
+	depthLimit int64
+	updateIn   time.Duration
+	timeout    time.Duration
+	updates    chan<- DistanceUpdate
 }
 
-func runTracker(ctx context.Context, include, exclude map[peer.ID]struct{}, provCache *pcache.ProviderCache, updateIn, timeout time.Duration, depthLimit int64, updates chan<- DistanceUpdate) {
-	defer close(updates)
+func RunDistanceTracker(ctx context.Context, include, exclude map[peer.ID]struct{}, provCache *pcache.ProviderCache, depthLimit int64, updateIn, timeout time.Duration) (<-chan DistanceUpdate, error) {
+	p2pHost, err := libp2p.New()
+	if err != nil {
+		return nil, err
+	}
+
+	updates := make(chan DistanceUpdate)
+
+	tkr := &tracker{
+		p2pHost:    p2pHost,
+		include:    include,
+		exclude:    exclude,
+		pcache:     provCache,
+		depthLimit: depthLimit,
+		updateIn:   updateIn,
+		timeout:    timeout,
+		updates:    updates,
+	}
+
+	go tkr.run(ctx)
+
+	return updates, nil
+}
+
+func (tkr *tracker) run(ctx context.Context) {
+	defer close(tkr.updates)
+	defer tkr.p2pHost.Close()
 
 	var lookForNew bool
 	var tracks map[peer.ID]*distTrack
-	if len(include) == 0 {
+	if len(tkr.include) == 0 {
 		lookForNew = true
 		tracks = make(map[peer.ID]*distTrack)
 	} else {
-		tracks = make(map[peer.ID]*distTrack, len(include))
-		for pid := range include {
-			if _, ok := exclude[pid]; ok {
+		tracks = make(map[peer.ID]*distTrack, len(tkr.include))
+		for pid := range tkr.include {
+			if _, ok := tkr.exclude[pid]; ok {
 				continue
 			}
 			tracks[pid] = &distTrack{}
@@ -65,41 +96,41 @@ func runTracker(ctx context.Context, include, exclude map[peer.ID]struct{}, prov
 	for {
 		select {
 		case <-timer.C:
-			if err := provCache.Refresh(ctx); err != nil {
+			if err := tkr.pcache.Refresh(ctx); err != nil {
 				return
 			}
 			if lookForNew {
-				for _, pinfo := range provCache.List() {
+				for _, pinfo := range tkr.pcache.List() {
 					pid := pinfo.AddrInfo.ID
 					if _, ok := tracks[pid]; !ok {
-						if _, ok = exclude[pid]; !ok {
+						if _, ok = tkr.exclude[pid]; !ok {
 							tracks[pid] = &distTrack{}
 						}
 					}
 				}
 			}
-			updateTracks(ctx, provCache, tracks, timeout, depthLimit, updates)
-			timer.Reset(updateIn)
+			tkr.updateTracks(ctx, tracks)
+			timer.Reset(tkr.updateIn)
 		case <-ctx.Done():
 			return
 		}
 	}
 }
 
-func updateTracks(ctx context.Context, provCache *pcache.ProviderCache, tracks map[peer.ID]*distTrack, timeout time.Duration, depthLimit int64, updates chan<- DistanceUpdate) {
+func (tkr *tracker) updateTracks(ctx context.Context, tracks map[peer.ID]*distTrack) {
 	for providerID, track := range tracks {
-		updateTrack(ctx, providerID, track, provCache, timeout, depthLimit, updates)
+		tkr.updateTrack(ctx, providerID, track)
 	}
 }
 
-func updateTrack(ctx context.Context, pid peer.ID, track *distTrack, provCache *pcache.ProviderCache, timeout time.Duration, depthLimit int64, updates chan<- DistanceUpdate) {
-	if timeout != 0 {
+func (tkr *tracker) updateTrack(ctx context.Context, pid peer.ID, track *distTrack) {
+	if tkr.timeout != 0 {
 		var cancel context.CancelFunc
-		ctx, cancel = context.WithTimeout(ctx, timeout)
+		ctx, cancel = context.WithTimeout(ctx, tkr.timeout)
 		defer cancel()
 	}
 
-	pinfo, err := provCache.Get(ctx, pid)
+	pinfo, err := tkr.pcache.Get(ctx, pid)
 	if err != nil {
 		return
 	}
@@ -108,7 +139,7 @@ func updateTrack(ctx context.Context, pid peer.ID, track *distTrack, provCache *
 		if track.errType != errTypeNotFound {
 			track.errType = errTypeNotFound
 			track.err = fmt.Errorf("provider info not found")
-			updates <- DistanceUpdate{
+			tkr.updates <- DistanceUpdate{
 				ID:  pid,
 				Err: track.err,
 			}
@@ -120,7 +151,7 @@ func updateTrack(ctx context.Context, pid peer.ID, track *distTrack, provCache *
 		if track.errType != errTypeNoSync {
 			track.errType = errTypeNoSync
 			track.err = fmt.Errorf("provider never synced")
-			updates <- DistanceUpdate{
+			tkr.updates <- DistanceUpdate{
 				ID:  pid,
 				Err: track.err,
 			}
@@ -132,7 +163,7 @@ func updateTrack(ctx context.Context, pid peer.ID, track *distTrack, provCache *
 		if track.errType != errTypeNoPublisher {
 			track.errType = errTypeNoPublisher
 			track.err = fmt.Errorf("no advertisement publisher")
-			updates <- DistanceUpdate{
+			tkr.updates <- DistanceUpdate{
 				ID:  pid,
 				Err: track.err,
 			}
@@ -140,12 +171,12 @@ func updateTrack(ctx context.Context, pid peer.ID, track *distTrack, provCache *
 		return
 	}
 
-	pubClient, err := adpub.NewClient(*pinfo.Publisher, adpub.WithAdChainDepthLimit(depthLimit))
+	pubClient, err := adpub.NewClient(*pinfo.Publisher, adpub.WithAdChainDepthLimit(tkr.depthLimit), adpub.WithLibp2pHost(tkr.p2pHost))
 	if err != nil {
 		if track.errType != errTypePubClient {
 			track.errType = errTypePubClient
 			track.err = fmt.Errorf("cannot create publisher client: %w", err)
-			updates <- DistanceUpdate{
+			tkr.updates <- DistanceUpdate{
 				ID:  pid,
 				Err: track.err,
 			}
@@ -160,7 +191,7 @@ func updateTrack(ctx context.Context, pid peer.ID, track *distTrack, provCache *
 			if track.errType != errTypeUpdate {
 				track.errType = errTypeUpdate
 				track.err = fmt.Errorf("cannot get distance update: %w", err)
-				updates <- DistanceUpdate{
+				tkr.updates <- DistanceUpdate{
 					ID:  pid,
 					Err: track.err,
 				}
@@ -174,7 +205,7 @@ func updateTrack(ctx context.Context, pid peer.ID, track *distTrack, provCache *
 		if dist != -1 {
 			track.head = head
 		}
-		updates <- DistanceUpdate{
+		tkr.updates <- DistanceUpdate{
 			ID:       pid,
 			Distance: dist,
 		}
@@ -189,7 +220,7 @@ func updateTrack(ctx context.Context, pid peer.ID, track *distTrack, provCache *
 		if track.errType != errTypeUpdate {
 			track.errType = errTypeUpdate
 			track.err = fmt.Errorf("cannot get distance update: %w", err)
-			updates <- DistanceUpdate{
+			tkr.updates <- DistanceUpdate{
 				ID:  pid,
 				Err: track.err,
 			}
@@ -201,7 +232,7 @@ func updateTrack(ctx context.Context, pid peer.ID, track *distTrack, provCache *
 	if dist == -1 {
 		track.dist = -1
 		track.head = cid.Undef
-		updates <- DistanceUpdate{
+		tkr.updates <- DistanceUpdate{
 			ID:       pid,
 			Distance: -1,
 		}
@@ -220,7 +251,7 @@ func updateTrack(ctx context.Context, pid peer.ID, track *distTrack, provCache *
 			if track.errType != errTypeUpdate {
 				track.errType = errTypeUpdate
 				track.err = fmt.Errorf("cannot get distance update: %w", err)
-				updates <- DistanceUpdate{
+				tkr.updates <- DistanceUpdate{
 					ID:  pid,
 					Err: track.err,
 				}
@@ -232,7 +263,7 @@ func updateTrack(ctx context.Context, pid peer.ID, track *distTrack, provCache *
 		if dist == -1 {
 			track.dist = -1
 			track.head = cid.Undef
-			updates <- DistanceUpdate{
+			tkr.updates <- DistanceUpdate{
 				ID:       pid,
 				Distance: -1,
 			}
@@ -247,7 +278,7 @@ func updateTrack(ctx context.Context, pid peer.ID, track *distTrack, provCache *
 		return
 	}
 
-	updates <- DistanceUpdate{
+	tkr.updates <- DistanceUpdate{
 		ID:       pid,
 		Distance: track.dist,
 	}

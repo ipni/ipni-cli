@@ -283,7 +283,10 @@ func followDistance(cctx *cli.Context, include, exclude map[peer.ID]struct{}, pc
 
 	fmt.Fprintln(os.Stderr, "Showing provider distance updates, ctrl-c to cancel...")
 	limit := cctx.Int64("ad-depth-limit")
-	updates := dtrack.RunDistanceTracker(cctx.Context, include, exclude, pc, limit, trackUpdateIn, timeout)
+	updates, err := dtrack.RunDistanceTracker(cctx.Context, include, exclude, pc, limit, trackUpdateIn, timeout)
+	if err != nil {
+		return err
+	}
 	for update := range updates {
 		if update.Err != nil {
 			fmt.Fprintln(os.Stderr, "Provider", update.ID, "distance error:", update.Err)
