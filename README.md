@@ -69,7 +69,7 @@ ipni ads dist --ai=/ip4/76.219.232.45/tcp/24001/p2p/12D3KooWPNbkEgjdBNeaCGpsgCrP
 ```
 - Find the distance between 2 advertisements on a publisher's chain:
 ```sh
-ipni ads dist  --ai=/ip4/76.219.232.45/tcp/24001/p2p/12D3KooWPNbkEgjdBNeaCGpsgCrPRETe4uBZf1ShFXStobdN18ys \
+ipni ads dist --ai=/ip4/76.219.232.45/tcp/24001/p2p/12D3KooWPNbkEgjdBNeaCGpsgCrPRETe4uBZf1ShFXStobdN18ys \
     --start=baguqeera3aylz3gkoxtkmqdwulxlaqbudf7nhdomfpyjqij236pwehrngngq \
     --end=baguqeerage4rh6yqy4u37x7i337q57wrwfls5ihiei6l72rr6ezrw5vcucea
 ```
@@ -107,13 +107,13 @@ ipni find -i https://cid.contact --cid bafybeigvgzoolc3drupxhlevdp2ugqcrbcsqfmce
 ```sh 
 ipni provider --all -i https://dev.cid.contact -id | ipni provider -invert -i https://cid.contact -id
 ```
-- Get combined information from multiple providers:
+- Get combined provider information from multiple indexers:
 ```
 $ ipni provider --all -i https://alva.dev.cid.contact -i https://cora.dev.cid.contact --id-only | wc -l
      405
 $ ipni provider --all -i https://alva.dev.cid.contact --id-only | wc -l
      209
-> ipni provider --all -i https://cora.dev.cid.contact --id-only | wc -l
+$ ipni provider --all -i https://cora.dev.cid.contact --id-only | wc -l
      196
 ```
 
