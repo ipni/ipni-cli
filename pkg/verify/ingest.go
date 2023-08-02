@@ -76,13 +76,13 @@ Example usage:
   random number generator, seeded with '1413':
 	verify ingest --provider-id 12D3KooWE8yt84RVwW3sFcd6WMjbUdWrZer2YtT4dmtj3dHdahSZ \
 		--from-car my-dag.car \
-		--indexer 192.168.2.100:3000 \
+		--indexer http://192.168.2.100:3000 \
 		--sampling-prob 0.5 --rng-seed 1413
 
 * Verify ingestion from CARv2 index file using all available multihashes:
 	verify ingest --provider-id 12D3KooWE8yt84RVwW3sFcd6WMjbUdWrZer2YtT4dmtj3dHdahSZ \
 		--from-car my-idx.idx \
-		--indexer 192.168.2.100:3000
+		--indexer http://192.168.2.100:3000
 
 The output respectively prints:
 - The number of multihashes the tool failed to verify, e.g. due to communication error.
