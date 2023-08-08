@@ -12,9 +12,7 @@ import (
 	"github.com/ipfs/go-cid"
 	"github.com/ipfs/go-datastore"
 	dssync "github.com/ipfs/go-datastore/sync"
-	"github.com/ipld/go-ipld-prime"
 	"github.com/ipld/go-ipld-prime/datamodel"
-	cidlink "github.com/ipld/go-ipld-prime/linking/cid"
 	"github.com/ipld/go-ipld-prime/node/basicnode"
 	"github.com/ipld/go-ipld-prime/traversal/selector"
 	"github.com/ipld/go-ipld-prime/traversal/selector/builder"
@@ -38,17 +36,10 @@ type client struct {
 	maxSyncRetry      uint64
 	syncRetryBackoff  time.Duration
 
-	sub *dagsync.Subscriber
-
-	store     *ClientStore
 	publisher peer.AddrInfo
-
-	// adSel is the selector for a single advertisement.
-	adSel ipld.Node
-
-	host     host.Host
-	ownsHost bool
-	topic    string
+	host      host.Host
+	ownsHost  bool
+	topic     string
 }
 
 var ErrContentNotFound = errors.New("content not found at publisher")
@@ -71,32 +62,16 @@ func NewClient(addrInfo peer.AddrInfo, options ...Option) (Client, error) {
 
 	opts.p2pHost.Peerstore().AddAddrs(addrInfo.ID, addrInfo.Addrs, time.Hour)
 
-	store := newClientStore()
-	sub, err := dagsync.NewSubscriber(opts.p2pHost, store.Batching, store.LinkSystem, opts.topic)
-	if err != nil {
-		return nil, err
-	}
-
-	ssb := builder.NewSelectorSpecBuilder(basicnode.Prototype.Any)
-	adSel := ssb.ExploreRecursive(selector.RecursionLimitDepth(1), ssb.ExploreFields(
-		func(efsb builder.ExploreFieldsSpecBuilder) {
-			efsb.Insert("PreviousID", ssb.ExploreRecursiveEdge())
-		})).Node()
-
 	return &client{
 		adChainDepthLimit: opts.adChainDepthLimit,
 		entriesDepthLimit: opts.entriesDepthLimit,
 		maxSyncRetry:      opts.maxSyncRetry,
 		syncRetryBackoff:  opts.syncRetryBackoff,
 
-		sub:       sub,
 		publisher: addrInfo,
-		store:     store,
-		adSel:     adSel,
-
-		host:     opts.p2pHost,
-		ownsHost: ownsHost,
-		topic:    opts.topic,
+		host:      opts.p2pHost,
+		ownsHost:  ownsHost,
+		topic:     opts.topic,
 	}, nil
 }
 
@@ -113,22 +88,10 @@ func (c *client) Distance(ctx context.Context, oldestCid, newestCid cid.Cid) (in
 		return 0, cid.Undef, errors.New("must specify a oldest CID")
 	}
 
-	var rLimit selector.RecursionLimit
-	if c.adChainDepthLimit == 0 {
-		rLimit = selector.RecursionLimitNone()
-	} else {
-		rLimit = selector.RecursionLimitDepth(c.adChainDepthLimit + 1)
+	var depthLimit int64
+	if c.adChainDepthLimit != 0 {
+		depthLimit = c.adChainDepthLimit + 1
 	}
-
-	stopAt := cidlink.Link{Cid: oldestCid}
-
-	ssb := builder.NewSelectorSpecBuilder(basicnode.Prototype.Any)
-	adSeqSel := ssb.ExploreFields(
-		func(efsb builder.ExploreFieldsSpecBuilder) {
-			efsb.Insert("PreviousID", ssb.ExploreRecursiveEdge())
-		}).Node()
-
-	sel := dagsync.ExploreRecursiveWithStopNode(rLimit, adSeqSel, stopAt)
 
 	// Create a linksystem that only counts, and does not store data.
 	cs := newCountStore()
@@ -139,7 +102,8 @@ func (c *client) Distance(ctx context.Context, oldestCid, newestCid cid.Cid) (in
 	}
 	defer sub.Close()
 
-	newestCid, err = sub.Sync(ctx, c.publisher, newestCid, sel)
+	newestCid, err = sub.SyncAdChain(ctx, c.publisher, dagsync.ScopedDepthLimit(depthLimit),
+		dagsync.WithHeadAdCid(newestCid), dagsync.WithStopAdCid(oldestCid))
 	if err != nil {
 		return 0, cid.Undef, err
 	}
@@ -153,37 +117,37 @@ func (c *client) Distance(ctx context.Context, oldestCid, newestCid cid.Cid) (in
 }
 
 func (c *client) List(ctx context.Context, latestCid cid.Cid, n int, w io.Writer) error {
-	var rLimit selector.RecursionLimit
-	if n < 1 {
-		rLimit = selector.RecursionLimitNone()
-	} else {
-		rLimit = selector.RecursionLimitDepth(int64(n))
+	store := newClientStore()
+	sub, err := dagsync.NewSubscriber(c.host, store.Batching, store.LinkSystem, c.topic)
+	if err != nil {
+		return err
 	}
-	ssb := builder.NewSelectorSpecBuilder(basicnode.Prototype.Any)
-	adSeqSel := ssb.ExploreFields(
-		func(efsb builder.ExploreFieldsSpecBuilder) {
-			efsb.Insert("PreviousID", ssb.ExploreRecursiveEdge())
-		}).Node()
-	sel := dagsync.ExploreRecursiveWithStopNode(rLimit, adSeqSel, nil)
+	defer sub.Close()
 
-	latestCid, err := c.sub.Sync(ctx, c.publisher, latestCid, sel)
+	latestCid, err = sub.SyncAdChain(ctx, c.publisher, dagsync.WithHeadAdCid(latestCid), dagsync.ScopedDepthLimit(int64(n)))
 	if err != nil {
 		return err
 	}
 
-	return c.store.list(ctx, latestCid, n, w)
+	return store.list(ctx, latestCid, n, w)
 }
 
 func (c *client) GetAdvertisement(ctx context.Context, adCid cid.Cid) (*Advertisement, error) {
+	store := newClientStore()
+	sub, err := dagsync.NewSubscriber(c.host, store.Batching, store.LinkSystem, c.topic)
+	if err != nil {
+		return nil, err
+	}
+	defer sub.Close()
+
 	// Sync the advertisement without entries first.
-	var err error
-	adCid, err = c.syncAdWithRetry(ctx, adCid)
+	adCid, err = c.syncAdWithRetry(ctx, adCid, sub)
 	if err != nil {
 		return nil, err
 	}
 
 	// Load the synced advertisement from local store.
-	ad, err := c.store.getAdvertisement(ctx, adCid)
+	ad, err := store.getAdvertisement(ctx, adCid)
 	if err != nil {
 		return nil, err
 	}
@@ -196,14 +160,14 @@ func (c *client) GetAdvertisement(ctx context.Context, adCid cid.Cid) (*Advertis
 	return ad, err
 }
 
-func (c *client) syncAdWithRetry(ctx context.Context, adCid cid.Cid) (cid.Cid, error) {
+func (c *client) syncAdWithRetry(ctx context.Context, adCid cid.Cid, sub *dagsync.Subscriber) (cid.Cid, error) {
 	if c.maxSyncRetry == 0 {
-		return c.sub.Sync(ctx, c.publisher, adCid, c.adSel)
+		return sub.SyncAdChain(ctx, c.publisher, dagsync.WithHeadAdCid(adCid), dagsync.ScopedDepthLimit(1))
 	}
 	var attempt uint64
 	var err error
 	for {
-		adCid, err = c.sub.Sync(ctx, c.publisher, adCid, c.adSel)
+		adCid, err = sub.SyncAdChain(ctx, c.publisher, dagsync.WithHeadAdCid(adCid), dagsync.ScopedDepthLimit(1))
 		if err == nil {
 			return adCid, nil
 		}
@@ -223,17 +187,18 @@ func (c *client) syncAdWithRetry(ctx context.Context, adCid cid.Cid) (cid.Cid, e
 }
 
 func (c *client) SyncEntriesWithRetry(ctx context.Context, id cid.Cid) error {
-	var attempt uint64
-	var recurLimit selector.RecursionLimit
-	if c.entriesDepthLimit == 0 {
-		recurLimit = selector.RecursionLimitNone()
-	} else {
-		recurLimit = selector.RecursionLimitDepth(c.entriesDepthLimit)
+	store := newClientStore()
+	sub, err := dagsync.NewSubscriber(c.host, store.Batching, store.LinkSystem, c.topic)
+	if err != nil {
+		return err
 	}
+	defer sub.Close()
+
+	var attempt uint64
+	recurLimit := c.entriesDepthLimit
 
 	for {
-		sel := selectEntriesWithLimit(recurLimit)
-		_, err := c.sub.Sync(ctx, c.publisher, id, sel)
+		err := sub.SyncEntries(ctx, c.publisher, id, dagsync.ScopedDepthLimit(recurLimit))
 		if err == nil {
 			// Synced everything asked for by the selector.
 			return nil
@@ -245,26 +210,25 @@ func (c *client) SyncEntriesWithRetry(ctx context.Context, id cid.Cid) error {
 		if attempt > c.maxSyncRetry {
 			return fmt.Errorf("exceeded maximum retries syncing entries: %w", err)
 		}
-		nextMissing, visitedDepth, present := c.findNextMissingChunkLink(ctx, id)
+		nextMissing, visitedDepth, present := findNextMissingChunkLink(ctx, id, store)
 		if !present {
 			// Reached the end of the chain.
 			return nil
 		}
 		id = nextMissing
-		remainingLimit := recurLimit.Depth() - visitedDepth
-		recurLimit = selector.RecursionLimitDepth(remainingLimit)
+		recurLimit -= visitedDepth
 		fmt.Fprintf(os.Stderr, "entries sync retry %d: %s\n", attempt, err)
 		time.Sleep(c.syncRetryBackoff)
 	}
 }
 
-func (c *client) findNextMissingChunkLink(ctx context.Context, next cid.Cid) (cid.Cid, int64, bool) {
+func findNextMissingChunkLink(ctx context.Context, next cid.Cid, store *ClientStore) (cid.Cid, int64, bool) {
 	var depth int64
 	for {
 		if !isPresent(next) {
 			return cid.Undef, depth, false
 		}
-		c, err := c.store.getNextChunkLink(ctx, next)
+		c, err := store.getNextChunkLink(ctx, next)
 		if errors.Is(err, datastore.ErrNotFound) {
 			return next, depth, true
 		}
@@ -274,11 +238,8 @@ func (c *client) findNextMissingChunkLink(ctx context.Context, next cid.Cid) (ci
 }
 
 func (c *client) Close() error {
-	err := c.sub.Close()
-	if c.ownsHost {
-		if err := c.host.Close(); err != nil {
-			return err
-		}
+	if !c.ownsHost {
+		return nil
 	}
-	return err
+	return c.host.Close()
 }
