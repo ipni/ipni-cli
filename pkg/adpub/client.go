@@ -12,10 +12,6 @@ import (
 	"github.com/ipfs/go-cid"
 	"github.com/ipfs/go-datastore"
 	dssync "github.com/ipfs/go-datastore/sync"
-	"github.com/ipld/go-ipld-prime/datamodel"
-	"github.com/ipld/go-ipld-prime/node/basicnode"
-	"github.com/ipld/go-ipld-prime/traversal/selector"
-	"github.com/ipld/go-ipld-prime/traversal/selector/builder"
 	"github.com/ipni/go-libipni/dagsync"
 	"github.com/libp2p/go-libp2p"
 	"github.com/libp2p/go-libp2p/core/host"
@@ -73,14 +69,6 @@ func NewClient(addrInfo peer.AddrInfo, options ...Option) (Client, error) {
 		ownsHost:  ownsHost,
 		topic:     opts.topic,
 	}, nil
-}
-
-func selectEntriesWithLimit(limit selector.RecursionLimit) datamodel.Node {
-	ssb := builder.NewSelectorSpecBuilder(basicnode.Prototype.Any)
-	return ssb.ExploreRecursive(limit, ssb.ExploreFields(
-		func(efsb builder.ExploreFieldsSpecBuilder) {
-			efsb.Insert("Next", ssb.ExploreRecursiveEdge())
-		})).Node()
 }
 
 func (c *client) Distance(ctx context.Context, oldestCid, newestCid cid.Cid) (int, cid.Cid, error) {
