@@ -124,7 +124,11 @@ func adsGetAction(cctx *cli.Context) error {
 		return err
 	}
 
-	for _, adCid := range adCids {
+	for i, adCid := range adCids {
+		if i != 0 {
+			fmt.Println()
+		}
+
 		ad, err := pubClient.GetAdvertisement(cctx.Context, adCid)
 		if err != nil {
 			if ad == nil {
@@ -180,18 +184,16 @@ func adsGetAction(cctx *cli.Context) error {
 			} else {
 				fmt.Println("Entries: None")
 			}
-
-			return nil
+			continue
 		}
 
 		// Sync entries if not a removal advertisement and has entries.
 		if ad.HasEntries() {
 			err = pubClient.SyncEntriesWithRetry(cctx.Context, ad.Entries.Root())
 			if err != nil {
-				if !errors.Is(err, adpub.ErrContentNotFound) {
-					fmt.Fprintf(os.Stderr, "⚠️ Failed to sync entries for advertisement %s. Content no longer hosted\n", ad.ID)
-				}
+				fmt.Fprintf(os.Stderr, "⚠️ Failed to sync entries for advertisement %s. %s\n", ad.ID, err)
 			}
+			continue
 		}
 
 		fmt.Println("Entries:")
@@ -215,7 +217,6 @@ func adsGetAction(cctx *cli.Context) error {
 		if entriesOutput != "" {
 			fmt.Println(entriesOutput)
 		}
-		fmt.Println()
 	}
 	return nil
 }

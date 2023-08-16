@@ -9,7 +9,7 @@ require (
 	github.com/ipfs/go-log/v2 v2.5.1
 	github.com/ipld/go-car/v2 v2.10.1
 	github.com/ipld/go-ipld-prime v0.20.0
-	github.com/ipni/go-libipni v0.3.5-0.20230810183809-74fc137eba82
+	github.com/ipni/go-libipni v0.4.0
 	github.com/libp2p/go-libp2p v0.29.2
 	github.com/mattn/go-isatty v0.0.19
 	github.com/montanaflynn/stats v0.7.0
@@ -151,3 +151,5 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	lukechampine.com/blake3 v1.2.1 // indirect
 )
+
+replace github.com/ipni/go-libipni => /Users/ajg/protocollabs/ipni/go-libipni

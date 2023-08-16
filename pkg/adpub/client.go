@@ -188,7 +188,7 @@ func (c *client) SyncEntriesWithRetry(ctx context.Context, id cid.Cid) error {
 	for {
 		err := sub.SyncEntries(ctx, c.publisher, id, dagsync.ScopedDepthLimit(recurLimit))
 		if err == nil {
-			// Synced everything asked for by the selector.
+			// Synced everything asked for.
 			return nil
 		}
 		if strings.HasSuffix(err.Error(), "content not found") {
