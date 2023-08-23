@@ -192,7 +192,10 @@ func adsGetAction(cctx *cli.Context) error {
 			err = pubClient.SyncEntriesWithRetry(cctx.Context, ad.Entries.Root())
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "⚠️ Failed to sync entries for advertisement %s. %s\n", ad.ID, err)
+				continue
 			}
+		} else {
+			fmt.Println("No entries")
 			continue
 		}
 

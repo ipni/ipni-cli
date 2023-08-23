@@ -36,6 +36,9 @@ type client struct {
 	host      host.Host
 	ownsHost  bool
 	topic     string
+
+	store *ClientStore
+	sub   *dagsync.Subscriber
 }
 
 var ErrContentNotFound = errors.New("content not found at publisher")
@@ -58,7 +61,7 @@ func NewClient(addrInfo peer.AddrInfo, options ...Option) (Client, error) {
 
 	opts.p2pHost.Peerstore().AddAddrs(addrInfo.ID, addrInfo.Addrs, time.Hour)
 
-	return &client{
+	c := &client{
 		adChainDepthLimit: opts.adChainDepthLimit,
 		entriesDepthLimit: opts.entriesDepthLimit,
 		maxSyncRetry:      opts.maxSyncRetry,
@@ -68,7 +71,16 @@ func NewClient(addrInfo peer.AddrInfo, options ...Option) (Client, error) {
 		host:      opts.p2pHost,
 		ownsHost:  ownsHost,
 		topic:     opts.topic,
-	}, nil
+
+		store: newClientStore(),
+	}
+
+	c.sub, err = dagsync.NewSubscriber(c.host, c.store.Batching, c.store.LinkSystem, c.topic)
+	if err != nil {
+		return nil, err
+	}
+
+	return c, nil
 }
 
 func (c *client) Distance(ctx context.Context, oldestCid, newestCid cid.Cid) (int, cid.Cid, error) {
@@ -105,37 +117,23 @@ func (c *client) Distance(ctx context.Context, oldestCid, newestCid cid.Cid) (in
 }
 
 func (c *client) List(ctx context.Context, latestCid cid.Cid, n int, w io.Writer) error {
-	store := newClientStore()
-	sub, err := dagsync.NewSubscriber(c.host, store.Batching, store.LinkSystem, c.topic)
-	if err != nil {
-		return err
-	}
-	defer sub.Close()
-
-	latestCid, err = sub.SyncAdChain(ctx, c.publisher, dagsync.WithHeadAdCid(latestCid), dagsync.ScopedDepthLimit(int64(n)))
+	latestCid, err := c.sub.SyncAdChain(ctx, c.publisher, dagsync.WithHeadAdCid(latestCid), dagsync.ScopedDepthLimit(int64(n)))
 	if err != nil {
 		return err
 	}
 
-	return store.list(ctx, latestCid, n, w)
+	return c.store.list(ctx, latestCid, n, w)
 }
 
 func (c *client) GetAdvertisement(ctx context.Context, adCid cid.Cid) (*Advertisement, error) {
-	store := newClientStore()
-	sub, err := dagsync.NewSubscriber(c.host, store.Batching, store.LinkSystem, c.topic)
-	if err != nil {
-		return nil, err
-	}
-	defer sub.Close()
-
 	// Sync the advertisement without entries first.
-	adCid, err = c.syncAdWithRetry(ctx, adCid, sub)
+	adCid, err := c.syncAdWithRetry(ctx, adCid, c.sub)
 	if err != nil {
 		return nil, err
 	}
 
 	// Load the synced advertisement from local store.
-	ad, err := store.getAdvertisement(ctx, adCid)
+	ad, err := c.store.getAdvertisement(ctx, adCid)
 	if err != nil {
 		return nil, err
 	}
@@ -175,18 +173,11 @@ func (c *client) syncAdWithRetry(ctx context.Context, adCid cid.Cid, sub *dagsyn
 }
 
 func (c *client) SyncEntriesWithRetry(ctx context.Context, id cid.Cid) error {
-	store := newClientStore()
-	sub, err := dagsync.NewSubscriber(c.host, store.Batching, store.LinkSystem, c.topic)
-	if err != nil {
-		return err
-	}
-	defer sub.Close()
-
 	var attempt uint64
 	recurLimit := c.entriesDepthLimit
 
 	for {
-		err := sub.SyncEntries(ctx, c.publisher, id, dagsync.ScopedDepthLimit(recurLimit))
+		err := c.sub.SyncEntries(ctx, c.publisher, id, dagsync.ScopedDepthLimit(recurLimit))
 		if err == nil {
 			// Synced everything asked for.
 			return nil
@@ -198,7 +189,7 @@ func (c *client) SyncEntriesWithRetry(ctx context.Context, id cid.Cid) error {
 		if attempt > c.maxSyncRetry {
 			return fmt.Errorf("exceeded maximum retries syncing entries: %w", err)
 		}
-		nextMissing, visitedDepth, present := findNextMissingChunkLink(ctx, id, store)
+		nextMissing, visitedDepth, present := findNextMissingChunkLink(ctx, id, c.store)
 		if !present {
 			// Reached the end of the chain.
 			return nil
@@ -226,6 +217,7 @@ func findNextMissingChunkLink(ctx context.Context, next cid.Cid, store *ClientSt
 }
 
 func (c *client) Close() error {
+	c.sub.Close()
 	if !c.ownsHost {
 		return nil
 	}

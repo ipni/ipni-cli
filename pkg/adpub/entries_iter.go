@@ -53,7 +53,6 @@ func isPresent(c cid.Cid) bool {
 }
 
 func (d *EntriesIterator) Next() (multihash.Multihash, error) {
-
 	if !d.IsPresent() {
 		return nil, io.EOF
 	}
