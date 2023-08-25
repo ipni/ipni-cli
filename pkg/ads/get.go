@@ -147,7 +147,7 @@ func adsGetAction(cctx *cli.Context) error {
 		fmt.Printf("ContextID:    %s\n", base64.StdEncoding.EncodeToString(ad.ContextID))
 		fmt.Printf("Addresses:    %v\n", ad.Addresses)
 		fmt.Printf("Is Remove:    %v\n", ad.IsRemove)
-		fmt.Printf("Metadata :    %s\n", base64.StdEncoding.EncodeToString(ad.Metadata))
+		fmt.Printf("Metadata:     %s\n", base64.StdEncoding.EncodeToString(ad.Metadata))
 
 		fmt.Println("Extended Providers:")
 		if ad.ExtendedProvider != nil {
