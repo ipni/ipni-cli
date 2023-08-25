@@ -138,7 +138,11 @@ func adsGetAction(cctx *cli.Context) error {
 		}
 
 		fmt.Printf("CID:          %s\n", ad.ID)
-		fmt.Printf("PreviousCID:  %s\n", ad.PreviousID)
+		var prevCID string
+		if ad.PreviousID != cid.Undef {
+			prevCID = ad.PreviousID.String()
+		}
+		fmt.Printf("PreviousCID:  %s\n", prevCID)
 		fmt.Printf("ProviderID:   %s\n", ad.ProviderID)
 		fmt.Printf("ContextID:    %s\n", base64.StdEncoding.EncodeToString(ad.ContextID))
 		fmt.Printf("Addresses:    %v\n", ad.Addresses)
