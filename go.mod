@@ -8,8 +8,8 @@ require (
 	github.com/ipfs/go-datastore v0.6.0
 	github.com/ipfs/go-log/v2 v2.5.1
 	github.com/ipld/go-car/v2 v2.10.1
-	github.com/ipld/go-ipld-prime v0.20.0
-	github.com/ipni/go-libipni v0.4.1-0.20230829154052-1ee93ea76eb6
+	github.com/ipld/go-ipld-prime v0.21.0
+	github.com/ipni/go-libipni v0.4.1-0.20230829161814-0c9c4cae11e0
 	github.com/libp2p/go-libp2p v0.30.1-0.20230829055202-ac038dbf2d38
 	github.com/mattn/go-isatty v0.0.19
 	github.com/montanaflynn/stats v0.7.0
@@ -65,8 +65,7 @@ require (
 	github.com/huin/goupnp v1.2.0 // indirect
 	github.com/ipfs/go-block-format v0.1.2 // indirect
 	github.com/ipfs/go-blockservice v0.5.1 // indirect
-	github.com/ipfs/go-graphsync v0.14.7 // indirect
-	github.com/ipfs/go-ipfs-exchange-offline v0.3.0 // indirect
+	github.com/ipfs/go-graphsync v0.14.8 // indirect
 	github.com/ipfs/go-ipfs-pq v0.0.3 // indirect
 	github.com/ipfs/go-ipfs-util v0.0.2 // indirect
 	github.com/ipfs/go-ipld-cbor v0.0.6 // indirect
@@ -75,7 +74,6 @@ require (
 	github.com/ipfs/go-libipfs v0.6.2 // indirect
 	github.com/ipfs/go-log v1.0.5 // indirect
 	github.com/ipfs/go-peertaskqueue v0.8.1 // indirect
-	github.com/ipfs/go-unixfs v0.4.4 // indirect
 	github.com/ipld/go-codec-dagpb v1.6.0 // indirect
 	github.com/jackpal/go-nat-pmp v1.0.2 // indirect
 	github.com/jbenet/go-temp-err-catcher v0.1.0 // indirect
