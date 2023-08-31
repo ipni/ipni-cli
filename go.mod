@@ -7,9 +7,9 @@ require (
 	github.com/ipfs/go-cid v0.4.1
 	github.com/ipfs/go-datastore v0.6.0
 	github.com/ipfs/go-log/v2 v2.5.1
-	github.com/ipld/go-car/v2 v2.10.1
+	github.com/ipld/go-car/v2 v2.11.0
 	github.com/ipld/go-ipld-prime v0.21.0
-	github.com/ipni/go-libipni v0.4.1-0.20230830173457-b2617d498154
+	github.com/ipni/go-libipni v0.5.0
 	github.com/libp2p/go-libp2p v0.31.0
 	github.com/mattn/go-isatty v0.0.19
 	github.com/montanaflynn/stats v0.7.0
