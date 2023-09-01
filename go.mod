@@ -17,7 +17,7 @@ require (
 	github.com/multiformats/go-multicodec v0.9.0
 	github.com/multiformats/go-multihash v0.2.3
 	github.com/stretchr/testify v1.8.4
-	github.com/urfave/cli/v2 v2.25.5
+	github.com/urfave/cli/v2 v2.25.7
 	github.com/ybbus/jsonrpc/v2 v2.1.7
 	golang.org/x/mod v0.12.0
 )
