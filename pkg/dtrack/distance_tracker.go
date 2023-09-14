@@ -7,9 +7,6 @@ import (
 
 	"github.com/ipfs/go-cid"
 	"github.com/ipni/go-libipni/pcache"
-	"github.com/ipni/ipni-cli/pkg/adpub"
-	"github.com/libp2p/go-libp2p"
-	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/libp2p/go-libp2p/core/peer"
 )
 
@@ -24,7 +21,6 @@ const (
 	errTypeNoPublisher
 	errTypeNoSync
 	errTypeNotFound
-	errTypePubClient
 	errTypeUpdate
 )
 
@@ -37,18 +33,17 @@ type distTrack struct {
 }
 
 type tracker struct {
-	p2pHost    host.Host
-	include    map[peer.ID]struct{}
-	exclude    map[peer.ID]struct{}
-	pcache     *pcache.ProviderCache
-	depthLimit int64
-	updateIn   time.Duration
-	timeout    time.Duration
-	updates    chan<- DistanceUpdate
+	adDist   *AdDistance
+	include  map[peer.ID]struct{}
+	exclude  map[peer.ID]struct{}
+	pcache   *pcache.ProviderCache
+	updateIn time.Duration
+	timeout  time.Duration
+	updates  chan<- DistanceUpdate
 }
 
-func RunDistanceTracker(ctx context.Context, include, exclude map[peer.ID]struct{}, provCache *pcache.ProviderCache, depthLimit int64, updateIn, timeout time.Duration) (<-chan DistanceUpdate, error) {
-	p2pHost, err := libp2p.New()
+func RunDistanceTracker(ctx context.Context, include, exclude map[peer.ID]struct{}, provCache *pcache.ProviderCache, updateIn, timeout time.Duration, options ...Option) (<-chan DistanceUpdate, error) {
+	adDist, err := NewAdDistance(options...)
 	if err != nil {
 		return nil, err
 	}
@@ -56,14 +51,13 @@ func RunDistanceTracker(ctx context.Context, include, exclude map[peer.ID]struct
 	updates := make(chan DistanceUpdate)
 
 	tkr := &tracker{
-		p2pHost:    p2pHost,
-		include:    include,
-		exclude:    exclude,
-		pcache:     provCache,
-		depthLimit: depthLimit,
-		updateIn:   updateIn,
-		timeout:    timeout,
-		updates:    updates,
+		adDist:   adDist,
+		include:  include,
+		exclude:  exclude,
+		pcache:   provCache,
+		updateIn: updateIn,
+		timeout:  timeout,
+		updates:  updates,
 	}
 
 	go tkr.run(ctx)
@@ -73,7 +67,7 @@ func RunDistanceTracker(ctx context.Context, include, exclude map[peer.ID]struct
 
 func (tkr *tracker) run(ctx context.Context) {
 	defer close(tkr.updates)
-	defer tkr.p2pHost.Close()
+	defer tkr.adDist.Close()
 
 	var lookForNew bool
 	var tracks map[peer.ID]*distTrack
@@ -171,26 +165,12 @@ func (tkr *tracker) updateTrack(ctx context.Context, pid peer.ID, track *distTra
 		return
 	}
 
-	pubClient, err := adpub.NewClient(*pinfo.Publisher, adpub.WithAdChainDepthLimit(tkr.depthLimit), adpub.WithLibp2pHost(tkr.p2pHost))
-	if err != nil {
-		if track.errType != errTypePubClient {
-			track.errType = errTypePubClient
-			track.err = fmt.Errorf("cannot create publisher client: %w", err)
-			tkr.updates <- DistanceUpdate{
-				ID:  pid,
-				Err: track.err,
-			}
-		}
-		return
-	}
-	defer pubClient.Close()
-
 	if track.head == cid.Undef {
-		dist, head, err := pubClient.Distance(ctx, pinfo.LastAdvertisement, cid.Undef)
+		dist, head, err := tkr.adDist.Get(ctx, *pinfo.Publisher, pinfo.LastAdvertisement, cid.Undef)
 		if err != nil {
 			if track.errType != errTypeUpdate {
 				track.errType = errTypeUpdate
-				track.err = fmt.Errorf("cannot get distance update: %w", err)
+				track.err = fmt.Errorf("cannot get distance from chain head to last seen ad: %w", err)
 				tkr.updates <- DistanceUpdate{
 					ID:  pid,
 					Err: track.err,
@@ -215,11 +195,11 @@ func (tkr *tracker) updateTrack(ctx context.Context, pid peer.ID, track *distTra
 	var updated bool
 
 	// Get distance between old head and new head.
-	dist, head, err := pubClient.Distance(ctx, track.head, cid.Undef)
+	dist, head, err := tkr.adDist.Get(ctx, *pinfo.Publisher, track.head, cid.Undef)
 	if err != nil {
 		if track.errType != errTypeUpdate {
 			track.errType = errTypeUpdate
-			track.err = fmt.Errorf("cannot get distance update: %w", err)
+			track.err = fmt.Errorf("cannot get distance from chain head to last seen head: %w", err)
 			tkr.updates <- DistanceUpdate{
 				ID:  pid,
 				Err: track.err,
@@ -246,11 +226,11 @@ func (tkr *tracker) updateTrack(ctx context.Context, pid peer.ID, track *distTra
 
 	if pinfo.LastAdvertisement != track.ad {
 		// If the last seen advertisement has changed, then get the distance it has moved.
-		dist, _, err := pubClient.Distance(ctx, track.ad, pinfo.LastAdvertisement)
+		dist, _, err := tkr.adDist.Get(ctx, *pinfo.Publisher, track.ad, pinfo.LastAdvertisement)
 		if err != nil {
 			if track.errType != errTypeUpdate {
 				track.errType = errTypeUpdate
-				track.err = fmt.Errorf("cannot get distance update: %w", err)
+				track.err = fmt.Errorf("cannot get distance distance last as has moved: %w", err)
 				tkr.updates <- DistanceUpdate{
 					ID:  pid,
 					Err: track.err,

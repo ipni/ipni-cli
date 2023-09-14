@@ -13,7 +13,6 @@ import (
 	"github.com/ipni/go-libipni/apierror"
 	"github.com/ipni/go-libipni/find/model"
 	"github.com/ipni/go-libipni/pcache"
-	"github.com/ipni/ipni-cli/pkg/adpub"
 	"github.com/ipni/ipni-cli/pkg/dtrack"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/mattn/go-isatty"
@@ -93,6 +92,11 @@ var providerFlags = []cli.Flag{
 		Aliases: []string{"adl"},
 		Usage:   "Limit on number of advertisements when finding distance. 0 for unlimited.",
 		Value:   5000,
+	},
+	&cli.StringFlag{
+		Name:  "topic",
+		Usage: "Topic on which index advertisements are published. Only needed to get head advertisement via Graphsync with non-standard topic.",
+		Value: "/indexer/ingest/mainnet",
 	},
 }
 
@@ -283,7 +287,8 @@ func followDistance(cctx *cli.Context, include, exclude map[peer.ID]struct{}, pc
 
 	fmt.Fprintln(os.Stderr, "Showing provider distance updates, ctrl-c to cancel...")
 	limit := cctx.Int64("ad-depth-limit")
-	updates, err := dtrack.RunDistanceTracker(cctx.Context, include, exclude, pc, limit, trackUpdateIn, timeout)
+	updates, err := dtrack.RunDistanceTracker(cctx.Context, include, exclude, pc, trackUpdateIn, timeout,
+		dtrack.WithDepthLimit(limit), dtrack.WithTopic(cctx.String("topic")))
 	if err != nil {
 		return err
 	}
@@ -362,9 +367,13 @@ func getLastSeenDistance(cctx *cli.Context, pinfo *model.ProviderInfo) (int, cid
 	if !pinfo.LastAdvertisement.Defined() {
 		return 0, cid.Undef, errors.New("no last advertisement")
 	}
-	pubClient, err := adpub.NewClient(*pinfo.Publisher, adpub.WithAdChainDepthLimit(cctx.Int64("ad-depth-limit")))
+	adDist, err := dtrack.NewAdDistance(
+		dtrack.WithDepthLimit(cctx.Int64("ad-depth-limit")),
+		dtrack.WithTopic(cctx.String("topic")))
 	if err != nil {
 		return 0, cid.Undef, err
 	}
-	return pubClient.Distance(cctx.Context, pinfo.LastAdvertisement, cid.Undef)
+	defer adDist.Close()
+
+	return adDist.Get(cctx.Context, *pinfo.Publisher, pinfo.LastAdvertisement, cid.Undef)
 }

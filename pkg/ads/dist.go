@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/ipfs/go-cid"
-	"github.com/ipni/ipni-cli/pkg/adpub"
+	"github.com/ipni/ipni-cli/pkg/dtrack"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/urfave/cli/v2"
 )
@@ -46,7 +46,8 @@ func adsDistAction(cctx *cli.Context) error {
 	if err != nil {
 		return fmt.Errorf("bad start cid: %w", err)
 	}
-	provClient, err := adpub.NewClient(*addrInfo, adpub.WithTopicName(cctx.String("topic")))
+
+	adDist, err := dtrack.NewAdDistance(dtrack.WithTopic(cctx.String("topic")))
 	if err != nil {
 		return err
 	}
@@ -63,7 +64,7 @@ func adsDistAction(cctx *cli.Context) error {
 		endStr = "head"
 	}
 
-	adCount, _, err := provClient.Distance(cctx.Context, startCid, endCid)
+	adCount, _, err := adDist.Get(cctx.Context, *addrInfo, startCid, endCid)
 	if err != nil {
 		return err
 	}

@@ -11,7 +11,6 @@ import (
 
 	"github.com/ipfs/go-cid"
 	"github.com/ipfs/go-datastore"
-	dssync "github.com/ipfs/go-datastore/sync"
 	"github.com/ipni/go-libipni/dagsync"
 	"github.com/libp2p/go-libp2p"
 	"github.com/libp2p/go-libp2p/core/host"
@@ -21,13 +20,11 @@ import (
 type Client interface {
 	GetAdvertisement(context.Context, cid.Cid) (*Advertisement, error)
 	Close() error
-	Distance(context.Context, cid.Cid, cid.Cid) (int, cid.Cid, error)
 	List(context.Context, cid.Cid, int, io.Writer) error
 	SyncEntriesWithRetry(context.Context, cid.Cid) error
 }
 
 type client struct {
-	adChainDepthLimit int64
 	entriesDepthLimit int64
 	maxSyncRetry      uint64
 	syncRetryBackoff  time.Duration
@@ -62,7 +59,6 @@ func NewClient(addrInfo peer.AddrInfo, options ...Option) (Client, error) {
 	opts.p2pHost.Peerstore().AddAddrs(addrInfo.ID, addrInfo.Addrs, time.Hour)
 
 	c := &client{
-		adChainDepthLimit: opts.adChainDepthLimit,
 		entriesDepthLimit: opts.entriesDepthLimit,
 		maxSyncRetry:      opts.maxSyncRetry,
 		syncRetryBackoff:  opts.syncRetryBackoff,
@@ -81,39 +77,6 @@ func NewClient(addrInfo peer.AddrInfo, options ...Option) (Client, error) {
 	}
 
 	return c, nil
-}
-
-func (c *client) Distance(ctx context.Context, oldestCid, newestCid cid.Cid) (int, cid.Cid, error) {
-	if oldestCid == cid.Undef {
-		return 0, cid.Undef, errors.New("must specify a oldest CID")
-	}
-
-	var depthLimit int64
-	if c.adChainDepthLimit != 0 {
-		depthLimit = c.adChainDepthLimit + 1
-	}
-
-	// Create a linksystem that only counts, and does not store data.
-	cs := newCountStore()
-	gsds := dssync.MutexWrap(datastore.NewMapDatastore())
-	sub, err := dagsync.NewSubscriber(c.host, gsds, cs.LinkSystem, c.topic)
-	if err != nil {
-		return 0, cid.Undef, err
-	}
-	defer sub.Close()
-
-	newestCid, err = sub.SyncAdChain(ctx, c.publisher, dagsync.ScopedDepthLimit(depthLimit),
-		dagsync.WithHeadAdCid(newestCid), dagsync.WithStopAdCid(oldestCid))
-	if err != nil {
-		return 0, cid.Undef, err
-	}
-
-	dist := cs.distance()
-	if int64(dist) > c.adChainDepthLimit {
-		dist = -1
-	}
-
-	return dist, newestCid, nil
 }
 
 func (c *client) List(ctx context.Context, latestCid cid.Cid, n int, w io.Writer) error {
