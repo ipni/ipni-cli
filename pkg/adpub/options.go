@@ -9,12 +9,10 @@ import (
 )
 
 const (
-	defaultAdChainDepthLimit = 10000
 	defaultEntriesDepthLimit = 1000
 )
 
 type config struct {
-	adChainDepthLimit int64
 	entriesDepthLimit int64
 	p2pHost           host.Host
 	maxSyncRetry      uint64
@@ -28,7 +26,6 @@ type Option func(*config) error
 // getOpts creates a config and applies Options to it.
 func getOpts(opts []Option) (config, error) {
 	cfg := config{
-		adChainDepthLimit: defaultAdChainDepthLimit,
 		entriesDepthLimit: defaultEntriesDepthLimit,
 		topic:             "/indexer/ingest/mainnet",
 		syncRetryBackoff:  500 * time.Millisecond,
@@ -40,18 +37,6 @@ func getOpts(opts []Option) (config, error) {
 		}
 	}
 	return cfg, nil
-}
-
-// WithAdChainDepthLimit sets the depth limit when syncing an advertisement
-// chain. Setting to 0 means no limit.
-func WithAdChainDepthLimit(limit int64) Option {
-	return func(c *config) error {
-		if limit < 0 {
-			return errors.New("ad chain depth limit cannot be negative")
-		}
-		c.adChainDepthLimit = limit
-		return nil
-	}
 }
 
 // WithSyncRetryBackoff sets the length of time to wait before retrying a faild

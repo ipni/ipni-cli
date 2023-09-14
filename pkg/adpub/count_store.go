@@ -12,14 +12,14 @@ import (
 	_ "github.com/ipld/go-ipld-prime/codec/dagjson"
 )
 
-type CountStore struct {
+type countStore struct {
 	datastore.Batching
 	ipld.LinkSystem
 	count int
 }
 
-func newCountStore() *CountStore {
-	cs := &CountStore{
+func newCountStore() *countStore {
+	cs := &countStore{
 		Batching: datastore.NewNullDatastore(),
 	}
 	lsys := cidlink.DefaultLinkSystem()
@@ -36,6 +36,6 @@ func newCountStore() *CountStore {
 	return cs
 }
 
-func (s *CountStore) distance() int {
+func (s *countStore) distance() int {
 	return s.count
 }
