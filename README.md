@@ -109,12 +109,11 @@ ipni provider --all -i https://dev.cid.contact -id | ipni provider -invert -i ht
 ```
 - Get combined provider information from multiple indexers:
 ```
-$ ipni provider --all -i https://alva.dev.cid.contact -i https://cora.dev.cid.contact --id-only | wc -l
-     405
-$ ipni provider --all -i https://alva.dev.cid.contact --id-only | wc -l
-     209
-$ ipni provider --all -i https://cora.dev.cid.contact --id-only | wc -l
-     196
+ipni provider --all -i https://alva.dev.cid.contact -i https://cora.dev.cid.contact --id-only | wc -l
+```
+- Watch indexer stay up-to-date with a provider's advertisement chain:
+```
+ipni provider -i https://inga.prod.cid.contact -pid QmQzqxhK82kAmKvARFZSkUVS6fo9sySaiogAnx5EnZ6ZmC -follow-dist -uin=10s
 ```
 
 ### `spaddr`
