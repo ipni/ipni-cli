@@ -2,13 +2,10 @@ package find
 
 import (
 	"encoding/base64"
-	"errors"
 	"fmt"
-	"net/http"
 	"strings"
 
 	"github.com/ipfs/go-cid"
-	"github.com/ipni/go-libipni/apierror"
 	"github.com/ipni/go-libipni/find/client"
 	"github.com/ipni/go-libipni/find/model"
 	"github.com/ipni/go-libipni/metadata"
@@ -115,22 +112,9 @@ func dhFind(cctx *cli.Context, mhs []multihash.Multihash) error {
 		return err
 	}
 
-	var resp *model.FindResponse
-	for _, mh := range mhs {
-		r, err := cl.Find(cctx.Context, mh)
-		if err != nil {
-			// TODO: Look for error that specifies double-hashing not supported.
-			var ae *apierror.Error
-			if errors.As(err, &ae) && ae.Status() == http.StatusNotFound {
-				continue
-			}
-			return err
-		}
-		if resp == nil {
-			resp = r
-		} else {
-			resp.MultihashResults = append(resp.MultihashResults, r.MultihashResults...)
-		}
+	resp, err := client.FindBatch(cctx.Context, cl, mhs)
+	if err != nil {
+		return err
 	}
 	if resp == nil && cctx.Bool("fallback") {
 		return clearFind(cctx, mhs)
@@ -149,16 +133,10 @@ func clearFind(cctx *cli.Context, mhs []multihash.Multihash) error {
 		return err
 	}
 
-	var resp *model.FindResponse
-	if len(mhs) == 1 {
-		resp, err = cl.Find(cctx.Context, mhs[0])
-	} else {
-		resp, err = cl.FindBatch(cctx.Context, mhs)
-	}
+	resp, err := client.FindBatch(cctx.Context, cl, mhs)
 	if err != nil {
 		return err
 	}
-
 	return printResults(cctx, resp)
 }
 
@@ -184,6 +162,10 @@ func printResults(cctx *cli.Context, resp *model.FindResponse) error {
 
 	for i := range resp.MultihashResults {
 		fmt.Println("Multihash:", resp.MultihashResults[i].Multihash.B58String())
+		if len(resp.MultihashResults[i].ProviderResults) == 0 {
+			fmt.Println("  index not found")
+			continue
+		}
 		// Group results by provider.
 		providers := make(map[string][]model.ProviderResult)
 		for _, pr := range resp.MultihashResults[i].ProviderResults {
