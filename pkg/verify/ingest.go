@@ -1,7 +1,6 @@
 package verify
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"math/rand"
@@ -651,26 +650,27 @@ func verifyIngestFromMhs(cctx *cli.Context, find *client.Client, dhFind *client.
 }
 
 func verifyIngest(cctx *cli.Context, find *client.Client, dhFind *client.DHashClient, wantProvID peer.ID, mhs []multihash.Multihash) (*verifyResult, error) {
-	result := &verifyResult{}
-	mhsCount := len(mhs)
-	result.TotalMhChecked = mhsCount
+	result := &verifyResult{
+		TotalMhChecked: len(mhs),
+	}
 
 	var response *model.FindResponse
 	var err error
 	if dhFind != nil {
-		response, err = doDHFind(cctx.Context, dhFind, mhs)
+		response, err = client.FindBatch(cctx.Context, dhFind, mhs)
+		fmt.Println("🔒 Reader privacy enabled")
 	} else {
-		response, err = doClearFind(cctx.Context, find, mhs)
+		response, err = client.FindBatch(cctx.Context, find, mhs)
 	}
 	if err != nil {
-		result.FailedToVerify = mhsCount
+		result.FailedToVerify = len(mhs)
 		err = fmt.Errorf("failed to connect to indexer: %w", err)
 		result.Errs = append(result.Errs, err)
 		return result, nil
 	}
 
 	if response == nil || len(response.MultihashResults) == 0 {
-		result.Absent = mhsCount
+		result.Absent = len(mhs)
 		return result, nil
 	}
 
@@ -700,33 +700,4 @@ func verifyIngest(cctx *cli.Context, find *client.Client, dhFind *client.DHashCl
 		}
 	}
 	return result, nil
-}
-
-func doDHFind(ctx context.Context, cl *client.DHashClient, mhs []multihash.Multihash) (*model.FindResponse, error) {
-	var resp *model.FindResponse
-	for _, mh := range mhs {
-		r, err := cl.Find(ctx, mh)
-		if err != nil {
-			// TODO: Look for error that specifies double-hashing not supported.
-			var ae *apierror.Error
-			if errors.As(err, &ae) && ae.Status() == http.StatusNotFound {
-				continue
-			}
-			return nil, err
-		}
-		if resp == nil {
-			resp = r
-		} else {
-			resp.MultihashResults = append(resp.MultihashResults, r.MultihashResults...)
-		}
-	}
-	fmt.Println("🔒 Reader privacy enabled")
-	return resp, nil
-}
-
-func doClearFind(ctx context.Context, cl *client.Client, mhs []multihash.Multihash) (*model.FindResponse, error) {
-	if len(mhs) == 1 {
-		return cl.Find(ctx, mhs[0])
-	}
-	return cl.FindBatch(ctx, mhs)
 }
