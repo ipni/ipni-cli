@@ -162,6 +162,10 @@ func printResults(cctx *cli.Context, resp *model.FindResponse) error {
 
 	for i := range resp.MultihashResults {
 		fmt.Println("Multihash:", resp.MultihashResults[i].Multihash.B58String())
+		if len(resp.MultihashResults[i].ProviderResults) == 0 {
+			fmt.Println("  index not found")
+			continue
+		}
 		// Group results by provider.
 		providers := make(map[string][]model.ProviderResult)
 		for _, pr := range resp.MultihashResults[i].ProviderResults {
