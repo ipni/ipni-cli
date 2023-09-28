@@ -220,7 +220,7 @@ func adsGetAction(cctx *cli.Context) error {
 			fmt.Println("  ---------------------")
 		}
 		fmt.Printf("  Chunk Count: %d\n", ad.Entries.ChunkCount())
-		fmt.Printf("  Total Count: %d\n", len(entries))
+		fmt.Printf("  Multihashes: %d\n", len(entries))
 		if entriesOutput != "" {
 			fmt.Println(entriesOutput)
 		}

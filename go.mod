@@ -9,7 +9,7 @@ require (
 	github.com/ipfs/go-log/v2 v2.5.1
 	github.com/ipld/go-car/v2 v2.13.1
 	github.com/ipld/go-ipld-prime v0.21.0
-	github.com/ipni/go-libipni v0.5.2
+	github.com/ipni/go-libipni v0.5.4
 	github.com/libp2p/go-libp2p v0.31.0
 	github.com/mattn/go-isatty v0.0.19
 	github.com/montanaflynn/stats v0.7.0
@@ -65,7 +65,7 @@ require (
 	github.com/huin/goupnp v1.2.0 // indirect
 	github.com/ipfs/go-block-format v0.2.0 // indirect
 	github.com/ipfs/go-blockservice v0.5.1 // indirect
-	github.com/ipfs/go-graphsync v0.14.8 // indirect
+	github.com/ipfs/go-graphsync v0.15.1 // indirect
 	github.com/ipfs/go-ipfs-pq v0.0.3 // indirect
 	github.com/ipfs/go-ipfs-util v0.0.2 // indirect
 	github.com/ipfs/go-ipld-cbor v0.1.0 // indirect
