@@ -44,19 +44,19 @@ var randomFlags = []cli.Flag{
 	},
 	&cli.IntFlag{
 		Name:    "number",
-		Usage:   "Number of advertisements to list. Specify 0 for all.",
+		Usage:   "Number of advertisements in chain to make random selection from.",
 		Aliases: []string{"n"},
 		Value:   10,
 	},
 	&cli.IntFlag{
 		Name:    "multihashes",
-		Usage:   "Number of advertisements to list. Specify 0 for all.",
+		Usage:   "Number of multihashes to randomly select from advertisement.",
 		Aliases: []string{"m"},
 		Value:   5,
 	},
 	&cli.BoolFlag{
 		Name:    "quiet",
-		Usage:   "Do not print descriptive output",
+		Usage:   "Only print multihashes and do not print descriptive output.",
 		Aliases: []string{"q"},
 	},
 	&cli.StringFlag{
@@ -69,11 +69,11 @@ var randomFlags = []cli.Flag{
 
 func randomAction(cctx *cli.Context) error {
 	adCount := cctx.Int("number")
-	if adCount == 0 {
+	if adCount <= 0 {
 		return errors.New("number must be at least 1")
 	}
 	mhsCount := cctx.Int("multihashes")
-	if mhsCount == 0 {
+	if mhsCount <= 0 {
 		return errors.New("multihashes must be at least 1")
 	}
 
@@ -222,7 +222,7 @@ func RandomMultihashes(ctx context.Context, addrInfo peer.AddrInfo, topic string
 		return errors.New("no suitable advertisements")
 	}
 	if !quiet {
-		fmt.Fprintln(os.Stderr, "Choosing 1 random advertisement, out of", len(ads), "suitable, out of", len(lines), "read from chein")
+		fmt.Fprintln(os.Stderr, "Choosing", mhsCount, "multihashes from 1 random out of", len(ads), "suitable advertisements")
 	}
 
 	rand.Shuffle(len(ads), func(i, j int) {
