@@ -31,7 +31,8 @@ Here are a few examples that use the following commands:
   - `list`        List advertisements from latest to earlier from a specified publisher
   - `dist`        Determine the distance between two advertisements in a chain
 - `find`      Find value by CID or multihash in indexer
-- `provider`  Show information about providers known to an indexer.
+- `provider`  Show information about providers known to an indexer
+- `random`    Show random multihashes from a random advertisement
 - `spaddr`    Get storage provider p2p ID and address from lotus gateway
 - `verify`    Verifies advertised content validity and queryability from an indexer
 

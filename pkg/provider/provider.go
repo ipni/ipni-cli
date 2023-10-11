@@ -21,7 +21,7 @@ import (
 
 var ProviderCmd = &cli.Command{
 	Name:  "provider",
-	Usage: "Show information about providers known to an indexer.",
+	Usage: "Show information about providers known to an indexer",
 	Description: `Get information about one or more providers from the specified indexer(s). An optional --distance flag calculates the distance from the last seen advertisement to the provider's current head advertisement.
 
 The --invert flag inverts the selection of providers, and shows all that are not specified. This can be used to filter out provideres from the returned list.

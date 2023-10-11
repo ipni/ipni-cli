@@ -24,10 +24,11 @@ import (
 )
 
 var RandomCmd = &cli.Command{
-	Name:   "random",
-	Usage:  "For specified providers, choose an advertisement with undeleted content from a random depth between 1 and n in the chain and return m random multihashs from the first entries block.",
-	Flags:  randomFlags,
-	Action: randomAction,
+	Name:        "random",
+	Usage:       "Show random multihashes from a random advertisement",
+	Description: "For specified providers, choose an advertisement with undeleted content from a random depth between 1 and n in the chain and return m random multihashs from the first entries block.",
+	Flags:       randomFlags,
+	Action:      randomAction,
 }
 
 var randomFlags = []cli.Flag{
