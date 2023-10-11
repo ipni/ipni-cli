@@ -132,9 +132,12 @@ func adsGetAction(cctx *cli.Context) error {
 		ad, err := pubClient.GetAdvertisement(cctx.Context, adCid)
 		if err != nil {
 			if ad == nil {
+				if errors.Is(err, adpub.ErrContentNotFound) {
+					err = errors.New("advertisement not found at publisher")
+				}
 				return err
 			}
-			fmt.Fprintf(os.Stderr, "⚠️ Failed to fully sync advertisement %s. Output shows partially synced ad.\n  Error: %s\n", adCid, err.Error())
+			fmt.Fprintf(os.Stderr, "⚠️  Failed to fully sync advertisement %s. Output shows partially synced ad.\n  Error: %s\n", adCid, err.Error())
 		}
 
 		fmt.Printf("CID:          %s\n", ad.ID)
@@ -184,7 +187,7 @@ func adsGetAction(cctx *cli.Context) error {
 		if ad.IsRemove {
 			if ad.HasEntries() {
 				fmt.Println("Entries: sync skipped")
-				fmt.Printf("  ⚠️ Removal advertisement with non-empty entries root cid: %s\n", ad.Entries.Root())
+				fmt.Printf("  ⚠️  Removal advertisement with non-empty entries root cid: %s\n", ad.Entries.Root())
 			} else {
 				fmt.Println("Entries: None")
 			}
@@ -195,7 +198,7 @@ func adsGetAction(cctx *cli.Context) error {
 		if ad.HasEntries() {
 			err = pubClient.SyncEntriesWithRetry(cctx.Context, ad.Entries.Root())
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "⚠️ Failed to sync entries for advertisement %s. %s\n", ad.ID, err)
+				fmt.Fprintf(os.Stderr, "⚠️  Failed to sync entries for advertisement %s: %s\n", ad.ID, err)
 				continue
 			}
 		} else {
@@ -210,7 +213,7 @@ func adsGetAction(cctx *cli.Context) error {
 			if !errors.Is(err, datastore.ErrNotFound) {
 				return err
 			}
-			entriesOutput = "⚠️ Note: More entries were available but not synced due to the configured entries recursion limit or error during traversal."
+			entriesOutput = "⚠️  Note: More entries were available but not synced due to the configured entries recursion limit or error during traversal."
 		}
 
 		if cctx.Bool("print-entries") {

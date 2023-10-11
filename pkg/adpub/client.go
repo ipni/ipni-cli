@@ -11,6 +11,7 @@ import (
 
 	"github.com/ipfs/go-cid"
 	"github.com/ipfs/go-datastore"
+	"github.com/ipld/go-ipld-prime"
 	"github.com/ipni/go-libipni/dagsync"
 	"github.com/libp2p/go-libp2p"
 	"github.com/libp2p/go-libp2p/core/host"
@@ -111,7 +112,13 @@ func (c *client) GetAdvertisement(ctx context.Context, adCid cid.Cid) (*Advertis
 
 func (c *client) syncAdWithRetry(ctx context.Context, adCid cid.Cid, sub *dagsync.Subscriber) (cid.Cid, error) {
 	if c.maxSyncRetry == 0 {
-		return sub.SyncAdChain(ctx, c.publisher, dagsync.WithHeadAdCid(adCid), dagsync.ScopedDepthLimit(1))
+		adCid, err := sub.SyncAdChain(ctx, c.publisher, dagsync.WithHeadAdCid(adCid), dagsync.ScopedDepthLimit(1))
+		if err != nil {
+			if errors.Is(err, ipld.ErrNotExists{}) || strings.Contains(err.Error(), "content not found") {
+				err = ErrContentNotFound
+			}
+		}
+		return adCid, err
 	}
 	var attempt uint64
 	var err error
@@ -145,7 +152,7 @@ func (c *client) SyncEntriesWithRetry(ctx context.Context, id cid.Cid) error {
 			// Synced everything asked for.
 			return nil
 		}
-		if strings.HasSuffix(err.Error(), "content not found") {
+		if errors.Is(err, ipld.ErrNotExists{}) || strings.Contains(err.Error(), "content not found") {
 			return ErrContentNotFound
 		}
 		attempt++
