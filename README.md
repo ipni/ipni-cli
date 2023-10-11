@@ -116,16 +116,22 @@ ipni provider --all -i https://alva.dev.cid.contact -i https://cora.dev.cid.cont
 ipni provider -i https://inga.prod.cid.contact -pid QmQzqxhK82kAmKvARFZSkUVS6fo9sySaiogAnx5EnZ6ZmC -follow-dist -uin=10s
 ```
 
+### `random`
+- For a specified provider, choose an advertisement with undeleted content from a random depth between 1 and n in the chain and return m random multihashs from the first entries block.
+```
+ipni random -i https://cid.contact --pid=12D3KooWC8QzjdzWynwYybjDLKa1YbPiRXUjwsibERubatgmQP51
+```
+
 ### `spaddr`
 - Get p2p ID and multiaddrs of storage provider identified by storage provider ID "t01000":
 ```
-./ipni spaddr --spid=t01000
+ipni spaddr --spid=t01000
 ```
 
 ### `verify ingest`
 - Verfy ingestion at cid.contact, of multihashes 
 ```
-./ipni verify ingest -i https://cid.contact \
+ipni verify ingest -i https://cid.contact \
     --ad-cid=baguqeerank3iclae2u4lin3vj2avuory3ny67tldh2cd5uodsgsdl6uawz3a \
     --provider-id=12D3KooWPNbkEgjdBNeaCGpsgCrPRETe4uBZf1ShFXStobdN18ys \
     --batch-size=25 \

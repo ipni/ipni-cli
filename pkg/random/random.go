@@ -221,7 +221,7 @@ func RandomMultihashes(ctx context.Context, addrInfo peer.AddrInfo, topic string
 		return errors.New("no suitable advertisements")
 	}
 	if !quiet {
-		fmt.Fprintln(os.Stderr, "Choosing 1 random advertisement, out of", len(ads), "suitable, out of", len(lines), "read")
+		fmt.Fprintln(os.Stderr, "Choosing 1 random advertisement, out of", len(ads), "suitable, out of", len(lines), "read from chein")
 	}
 
 	rand.Shuffle(len(ads), func(i, j int) {
