@@ -118,9 +118,13 @@ ipni provider -i https://inga.prod.cid.contact -pid QmQzqxhK82kAmKvARFZSkUVS6fo9
 ```
 
 ### `random`
-- For a specified provider, choose an advertisement with undeleted content from a random depth between 1 and n in the chain and return m random multihashs from the first entries block.
+- For specified providers, choose an advertisement with undeleted content from a random depth between 1 and n in the chain and return m random multihashs from the first entries block.
 ```
-ipni random -i https://cid.contact --pid=12D3KooWC8QzjdzWynwYybjDLKa1YbPiRXUjwsibERubatgmQP51
+ipni random -i https://cid.contact --n=5 --m=3 --pid=12D3KooWC8QzjdzWynwYybjDLKa1YbPiRXUjwsibERubatgmQP51
+```
+- Lookup provider information for each random multihash.
+```
+ipni random --quiet -i https://cid.contact --n=5 --m=3 --pid=12D3KooWC8QzjdzWynwYybjDLKa1YbPiRXUjwsibERubatgmQP51 | xargs -J % -n1 ipni find -i https://cid.contact -mh %
 ```
 
 ### `spaddr`
