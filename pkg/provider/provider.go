@@ -105,6 +105,10 @@ func providerAction(cctx *cli.Context) error {
 		return countProviders(cctx)
 	}
 
+	if cctx.Bool("all") {
+		return listProviders(cctx, nil)
+	}
+
 	pids := cctx.StringSlice("pid")
 	if len(pids) == 0 {
 		if isatty.IsTerminal(os.Stdin.Fd()) {
