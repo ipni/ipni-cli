@@ -12,6 +12,7 @@ import (
 	"github.com/ipni/ipni-cli/pkg/ads"
 	"github.com/ipni/ipni-cli/pkg/find"
 	"github.com/ipni/ipni-cli/pkg/provider"
+	"github.com/ipni/ipni-cli/pkg/random"
 	"github.com/ipni/ipni-cli/pkg/spaddr"
 	"github.com/ipni/ipni-cli/pkg/verify"
 	"github.com/urfave/cli/v2"
@@ -30,6 +31,7 @@ func main() {
 			ads.AdsCmd,
 			find.FindCmd,
 			provider.ProviderCmd,
+			random.RandomCmd,
 			spaddr.SPAddrCmd,
 			verify.VerifyCmd,
 			versionCmd,

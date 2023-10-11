@@ -31,7 +31,8 @@ Here are a few examples that use the following commands:
   - `list`        List advertisements from latest to earlier from a specified publisher
   - `dist`        Determine the distance between two advertisements in a chain
 - `find`      Find value by CID or multihash in indexer
-- `provider`  Show information about providers known to an indexer.
+- `provider`  Show information about providers known to an indexer
+- `random`    Show random multihashes from a random advertisement
 - `spaddr`    Get storage provider p2p ID and address from lotus gateway
 - `verify`    Verifies advertised content validity and queryability from an indexer
 
@@ -116,16 +117,26 @@ ipni provider --all -i https://alva.dev.cid.contact -i https://cora.dev.cid.cont
 ipni provider -i https://inga.prod.cid.contact -pid QmQzqxhK82kAmKvARFZSkUVS6fo9sySaiogAnx5EnZ6ZmC -follow-dist -uin=10s
 ```
 
+### `random`
+- For specified providers, choose an advertisement with undeleted content from a random depth between 1 and n in the chain and return m random multihashs from the first entries block.
+```
+ipni random -i https://cid.contact --n=5 --m=3 --pid=12D3KooWC8QzjdzWynwYybjDLKa1YbPiRXUjwsibERubatgmQP51
+```
+- Lookup provider information for each random multihash.
+```
+ipni random --quiet -i https://cid.contact --n=5 --m=3 --pid=12D3KooWC8QzjdzWynwYybjDLKa1YbPiRXUjwsibERubatgmQP51 | xargs -J % -n1 ipni find -i https://cid.contact -mh %
+```
+
 ### `spaddr`
 - Get p2p ID and multiaddrs of storage provider identified by storage provider ID "t01000":
 ```
-./ipni spaddr --spid=t01000
+ipni spaddr --spid=t01000
 ```
 
 ### `verify ingest`
 - Verfy ingestion at cid.contact, of multihashes 
 ```
-./ipni verify ingest -i https://cid.contact \
+ipni verify ingest -i https://cid.contact \
     --ad-cid=baguqeerank3iclae2u4lin3vj2avuory3ny67tldh2cd5uodsgsdl6uawz3a \
     --provider-id=12D3KooWPNbkEgjdBNeaCGpsgCrPRETe4uBZf1ShFXStobdN18ys \
     --batch-size=25 \
