@@ -73,7 +73,7 @@ var providerFlags = []cli.Flag{
 	},
 	&cli.BoolFlag{
 		Name:  "invert",
-		Usage: "Invert selection to show all providers except those specified. If used with --error then shoud those without LastError",
+		Usage: "Invert selection to show all providers except those specified. If used with --error shows those without LastError",
 	},
 	&cli.StringFlag{
 		Name:    "update-interval",
