@@ -25,7 +25,7 @@ import (
 
 var RandomCmd = &cli.Command{
 	Name:   "random",
-	Usage:  "For a specified provider, choose an advertisement with undeleted content from a random depth between 1 and n in the chain and return m random multihashs from the first entries block.",
+	Usage:  "For specified providers, choose an advertisement with undeleted content from a random depth between 1 and n in the chain and return m random multihashs from the first entries block.",
 	Flags:  randomFlags,
 	Action: randomAction,
 }
@@ -165,7 +165,7 @@ func RandomMultihashes(ctx context.Context, addrInfo peer.AddrInfo, topic string
 		return err
 	}
 	if !quiet {
-		fmt.Fprintf(os.Stderr, "Read %d advertisements, filtering ", len(lines))
+		fmt.Fprintf(os.Stderr, "Read %d advertisements, checking for deleted content", len(lines))
 	}
 
 	// Filter ads
