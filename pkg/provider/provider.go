@@ -73,7 +73,7 @@ var providerFlags = []cli.Flag{
 	},
 	&cli.BoolFlag{
 		Name:  "invert",
-		Usage: "Invert selection to show all providers except those specified",
+		Usage: "Invert selection to show all providers except those specified. If used with --error then shoud those without LastError",
 	},
 	&cli.StringFlag{
 		Name:    "update-interval",
@@ -102,17 +102,7 @@ var providerFlags = []cli.Flag{
 
 func providerAction(cctx *cli.Context) error {
 	if cctx.Bool("count") {
-		if cctx.Bool("invert") {
-			return errors.New("cannot use --count with --invert")
-		}
 		return countProviders(cctx)
-	}
-
-	if cctx.Bool("all") {
-		if cctx.Bool("invert") {
-			return errors.New("cannot use --all with --invert")
-		}
-		return listProviders(cctx, nil)
 	}
 
 	pids := cctx.StringSlice("pid")
@@ -213,9 +203,17 @@ func countProviders(cctx *cli.Context) error {
 
 	if cctx.Bool("error") {
 		var count int
-		for _, pinfo := range provs {
-			if pinfo.LastError != "" {
-				count++
+		if cctx.Bool("invert") {
+			for _, pinfo := range provs {
+				if pinfo.LastError == "" {
+					count++
+				}
+			}
+		} else {
+			for _, pinfo := range provs {
+				if pinfo.LastError != "" {
+					count++
+				}
 			}
 		}
 		fmt.Println(count)
@@ -242,14 +240,18 @@ func listProviders(cctx *cli.Context, exclude map[peer.ID]struct{}) error {
 		return nil
 	}
 
-	onlyWithError := cctx.Bool("error")
+	var errFilter, onlyWithError bool
+	if cctx.Bool("error") {
+		errFilter = true
+		onlyWithError = !cctx.Bool("invert")
+	}
 
 	if cctx.Bool("id-only") {
 		for _, pinfo := range provs {
 			if _, ok := exclude[pinfo.AddrInfo.ID]; ok {
 				continue
 			}
-			if onlyWithError && pinfo.LastError == "" {
+			if errFilter && (onlyWithError == (pinfo.LastError == "")) {
 				continue
 			}
 			fmt.Println(pinfo.AddrInfo.ID)
@@ -261,7 +263,7 @@ func listProviders(cctx *cli.Context, exclude map[peer.ID]struct{}) error {
 		if _, ok := exclude[pinfo.AddrInfo.ID]; ok {
 			continue
 		}
-		if onlyWithError && pinfo.LastError == "" {
+		if errFilter && (onlyWithError == (pinfo.LastError == "")) {
 			continue
 		}
 		showProviderInfo(cctx, pinfo)
