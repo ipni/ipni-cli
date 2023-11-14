@@ -8,6 +8,12 @@ This project provides a command line utility to access IPNI indexers and index-p
 
 ## Install
 
+### Install binary
+
+Get to the [latest ipni-cli release](https://github.com/ipni/ipni-cli/releases/latest) and get the binary appropriate for your system.
+
+### Build with Golang
+
 ```sh
 git clone https://github.com/ipni/ipni-cli.git
 cd ipni-cli
