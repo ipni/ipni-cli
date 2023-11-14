@@ -10,12 +10,14 @@ import (
 
 const (
 	defaultEntriesDepthLimit = 1000
+	defaultHttpTimeout       = 10 * time.Second
 )
 
 type config struct {
 	entriesDepthLimit int64
-	p2pHost           host.Host
+	httpTimeout       time.Duration
 	maxSyncRetry      uint64
+	p2pHost           host.Host
 	syncRetryBackoff  time.Duration
 	topic             string
 }
@@ -27,8 +29,9 @@ type Option func(*config) error
 func getOpts(opts []Option) (config, error) {
 	cfg := config{
 		entriesDepthLimit: defaultEntriesDepthLimit,
-		topic:             "/indexer/ingest/mainnet",
+		httpTimeout:       defaultHttpTimeout,
 		syncRetryBackoff:  500 * time.Millisecond,
+		topic:             "/indexer/ingest/mainnet",
 	}
 
 	for i, opt := range opts {
@@ -82,6 +85,16 @@ func WithEntriesDepthLimit(depthLimit int64) Option {
 			return errors.New("ad entries depth limit cannot be negative")
 		}
 		c.entriesDepthLimit = depthLimit
+		return nil
+	}
+}
+
+// WithHttpTimeout sets the timeout for http and libp2phttp connections.
+func WithHttpTimeout(to time.Duration) Option {
+	return func(c *config) error {
+		if to != 0 {
+			c.httpTimeout = to
+		}
 		return nil
 	}
 }

@@ -1,6 +1,10 @@
 package ads
 
-import "github.com/urfave/cli/v2"
+import (
+	"time"
+
+	"github.com/urfave/cli/v2"
+)
 
 var addrInfoFlag = &cli.StringFlag{
 	Name: "addr-info",
@@ -9,6 +13,14 @@ var addrInfoFlag = &cli.StringFlag{
 		"Example HTTP:      /ip4/1.2.3.4/tcp/1234/http/p2p/12D3KooWE8yt84RVwW3sFcd6WMjbUdWrZer2YtT4dmtj3dHdahSZ",
 	Aliases:  []string{"ai"},
 	Required: true,
+}
+
+var timeoutFlag = &cli.DurationFlag{
+	Name:        "timeout",
+	Aliases:     []string{"to"},
+	Usage:       "Timeout for http and libp2phttp connections, example: 2m30s",
+	Value:       10 * time.Second,
+	DefaultText: "10s",
 }
 
 var topicFlag = &cli.StringFlag{
