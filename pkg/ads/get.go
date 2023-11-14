@@ -58,6 +58,7 @@ var adsGetFlags = []cli.Flag{
 		Value:       100,
 		DefaultText: "100 (set to '0' for unlimited)",
 	},
+	timeoutFlag,
 	topicFlag,
 }
 
@@ -119,7 +120,8 @@ func adsGetAction(cctx *cli.Context) error {
 
 	pubClient, err := adpub.NewClient(*addrInfo,
 		adpub.WithTopicName(cctx.String("topic")),
-		adpub.WithEntriesDepthLimit(cctx.Int64("entries-depth-limit")))
+		adpub.WithEntriesDepthLimit(cctx.Int64("entries-depth-limit")),
+		adpub.WithHttpTimeout(cctx.Duration("timeout")))
 	if err != nil {
 		return err
 	}
