@@ -112,7 +112,7 @@ ipni find -i https://cid.contact --cid bafybeigvgzoolc3drupxhlevdp2ugqcrbcsqfmce
 ```
 - See which providers cid.contact knows about that dev.cid.contact does not:
 ```sh 
-ipni provider --all -i https://dev.cid.contact -id | ipni provider -invert -i https://cid.contact -id
+ipni provider --all -i https://dev.cid.contact --id-only | ipni provider -invert -i https://cid.contact --id-only
 ```
 - Get combined provider information from multiple indexers:
 ```

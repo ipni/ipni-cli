@@ -1,0 +1,34 @@
+builds:
+  - main: ./cmd/ipni
+    binary: ipni
+    ldflags:
+      # Sets the version variable in the build package to the build version prefixed with a 'v'
+      # Sets the main.date to a static date for checksum verification. See https://goreleaser.com/customization/builds/#reproducible-builds.
+      - -s -w -X github.com/ipni/ipni-cli/ipnicli.Revision={{.Commit}} -X github.com/ipni/ipni-cli/ipnicli.Release=v{{.Version}} -X github.com/ipni/ipni-cli/ipnicli.Version=v{{.Version}}-{{.Commit}}
+    goos:
+      - linux
+      - windows
+      - darwin
+    goarch:
+      - 'amd64'
+      - 'arm64'
+    # Change to a static date for checksum verification. See https://goreleaser.com/customization/builds/#reproducible-builds.
+    mod_timestamp: '{{.CommitTimestamp}}'
+    env:
+      - CGO_ENABLED=0
+universal_binaries:
+  - replace: true
+archives:
+  - format_overrides:
+    - goos: windows
+      format: zip
+    - goos: darwin
+      format: tar.xz
+    name_template: >-
+      {{ .ProjectName }}_{{ .Version }}_
+      {{- if eq .Os "darwin" }}mac_os
+      {{- else }}{{ .Os }}{{ end }}_{{ .Arch }}
+release:
+  mode: keep-existing
+changelog:
+  skip: true
