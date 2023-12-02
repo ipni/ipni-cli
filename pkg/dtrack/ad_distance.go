@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"io"
 
 	"github.com/ipfs/go-cid"
@@ -79,7 +80,7 @@ func (a *AdDistance) Get(ctx context.Context, publisher peer.AddrInfo, oldestCid
 	newestCid, err := a.sub.SyncAdChain(ctx, publisher, dagsync.ScopedDepthLimit(depthLimit),
 		dagsync.WithHeadAdCid(newestCid), dagsync.WithStopAdCid(oldestCid))
 	if err != nil {
-		return 0, cid.Undef, err
+		return 0, cid.Undef, fmt.Errorf("failed to sync chain lastAd=%s depth=%d: %w", a.store.lastKey, a.store.count, err)
 	}
 
 	dist := a.store.distance()
