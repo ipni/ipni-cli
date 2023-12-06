@@ -4,13 +4,11 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
-	"net/http"
 	"os"
 	"strings"
 	"time"
 
 	"github.com/ipfs/go-cid"
-	"github.com/ipni/go-libipni/apierror"
 	"github.com/ipni/go-libipni/find/model"
 	"github.com/ipni/go-libipni/pcache"
 	"github.com/ipni/ipni-cli/pkg/dtrack"
@@ -178,10 +176,6 @@ func providerAction(cctx *cli.Context) error {
 func getProvider(cctx *cli.Context, pc *pcache.ProviderCache, peerID peer.ID) error {
 	prov, err := pc.Get(cctx.Context, peerID)
 	if err != nil {
-		var ae *apierror.Error
-		if errors.As(err, &ae) && ae.Status() == http.StatusNotFound {
-			return errors.New("provider not found on indexer")
-		}
 		return err
 	}
 	if prov == nil {

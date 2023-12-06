@@ -33,6 +33,12 @@ var adsDistFlags = []cli.Flag{
 		Usage:   "Output only the distance",
 		Aliases: []string{"q"},
 	},
+	&cli.Int64Flag{
+		Name:    "dist-limit",
+		Usage:   "Limit the amount of distance to traverse",
+		Aliases: []string{"dl"},
+		Value:   5000,
+	},
 	topicFlag,
 }
 
@@ -47,7 +53,9 @@ func adsDistAction(cctx *cli.Context) error {
 		return fmt.Errorf("bad start cid: %w", err)
 	}
 
-	adDist, err := dtrack.NewAdDistance(dtrack.WithTopic(cctx.String("topic")))
+	adDist, err := dtrack.NewAdDistance(
+		dtrack.WithTopic(cctx.String("topic")),
+		dtrack.WithDepthLimit(cctx.Int64("dist-limit")))
 	if err != nil {
 		return err
 	}
