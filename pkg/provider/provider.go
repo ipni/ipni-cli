@@ -57,6 +57,10 @@ var providerFlags = []cli.Flag{
 		Usage: "Calculate distance from last seen advertisement to provider's current head advertisement",
 	},
 	&cli.BoolFlag{
+		Name:  "diff-pub",
+		Usage: "Only show providers whose publisher ID is different from the provider ID.",
+	},
+	&cli.BoolFlag{
 		Name:    "follow-dist",
 		Aliases: []string{"fd"},
 		Usage:   "Continue showing distance updates for providers",
@@ -182,6 +186,10 @@ func getProvider(cctx *cli.Context, pc *pcache.ProviderCache, peerID peer.ID) er
 		return errors.New("provider not found on indexer")
 	}
 
+	if cctx.Bool("diff-pub") && prov.AddrInfo.ID == prov.Publisher.ID {
+		return nil
+	}
+
 	if cctx.Bool("id-only") {
 		fmt.Println(prov.AddrInfo.ID)
 		return nil
@@ -244,24 +252,21 @@ func listProviders(cctx *cli.Context, exclude map[peer.ID]struct{}) error {
 		onlyWithError = !cctx.Bool("invert")
 	}
 
-	if cctx.Bool("id-only") {
-		for _, pinfo := range provs {
-			if _, ok := exclude[pinfo.AddrInfo.ID]; ok {
-				continue
-			}
-			if errFilter && (onlyWithError == (pinfo.LastError == "")) {
-				continue
-			}
-			fmt.Println(pinfo.AddrInfo.ID)
-		}
-		return nil
-	}
+	diffPub := cctx.Bool("diff-pub")
+	idOnly := cctx.Bool("id-only")
 
 	for _, pinfo := range provs {
 		if _, ok := exclude[pinfo.AddrInfo.ID]; ok {
 			continue
 		}
 		if errFilter && (onlyWithError == (pinfo.LastError == "")) {
+			continue
+		}
+		if diffPub && pinfo.AddrInfo.ID == pinfo.Publisher.ID {
+			continue
+		}
+		if idOnly {
+			fmt.Println(pinfo.AddrInfo.ID)
 			continue
 		}
 		showProviderInfo(cctx, pinfo)
