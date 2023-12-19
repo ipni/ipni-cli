@@ -9,8 +9,8 @@ require (
 	github.com/ipfs/go-log/v2 v2.5.1
 	github.com/ipld/go-car/v2 v2.13.1
 	github.com/ipld/go-ipld-prime v0.21.0
-	github.com/ipni/go-libipni v0.5.7
-	github.com/libp2p/go-libp2p v0.32.1
+	github.com/ipni/go-libipni v0.5.8
+	github.com/libp2p/go-libp2p v0.32.2
 	github.com/mattn/go-isatty v0.0.20
 	github.com/montanaflynn/stats v0.7.0
 	github.com/multiformats/go-multiaddr v0.12.0
@@ -120,7 +120,7 @@ require (
 	github.com/prometheus/procfs v0.11.1 // indirect
 	github.com/quic-go/qpack v0.4.0 // indirect
 	github.com/quic-go/qtls-go1-20 v0.3.4 // indirect
-	github.com/quic-go/quic-go v0.39.3 // indirect
+	github.com/quic-go/quic-go v0.39.4 // indirect
 	github.com/quic-go/webtransport-go v0.6.0 // indirect
 	github.com/raulk/go-watchdog v1.3.0 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
