@@ -9,11 +9,11 @@ require (
 	github.com/ipfs/go-log/v2 v2.5.1
 	github.com/ipld/go-car/v2 v2.13.1
 	github.com/ipld/go-ipld-prime v0.21.0
-	github.com/ipni/go-libipni v0.5.8
+	github.com/ipni/go-libipni v0.5.9
 	github.com/libp2p/go-libp2p v0.32.2
 	github.com/mattn/go-isatty v0.0.20
 	github.com/montanaflynn/stats v0.7.0
-	github.com/multiformats/go-multiaddr v0.12.0
+	github.com/multiformats/go-multiaddr v0.12.1
 	github.com/multiformats/go-multicodec v0.9.0
 	github.com/multiformats/go-multihash v0.2.3
 	github.com/stretchr/testify v1.8.4
