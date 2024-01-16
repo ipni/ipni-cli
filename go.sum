@@ -269,8 +269,8 @@ github.com/ipld/go-codec-dagpb v1.6.0/go.mod h1:ANzFhfP2uMJxRBr8CE+WQWs5UsNa0pYt
 github.com/ipld/go-ipld-prime v0.21.0 h1:n4JmcpOlPDIxBcY037SVfpd1G+Sj1nKZah0m6QH9C2E=
 github.com/ipld/go-ipld-prime v0.21.0/go.mod h1:3RLqy//ERg/y5oShXXdx5YIp50cFGOanyMctpPjsvxQ=
 github.com/ipld/go-ipld-prime/storage/bsadapter v0.0.0-20230102063945-1a409dc236dd h1:gMlw/MhNr2Wtp5RwGdsW23cs+yCuj9k2ON7i9MiJlRo=
-github.com/ipni/go-libipni v0.5.8 h1:iSob6WRjdRuKpDZmwYw5aBD13utosnEGlRRun/21ZCs=
-github.com/ipni/go-libipni v0.5.8/go.mod h1:QvWhyJAY6CZ6IoQNw0DvZQW2nDJWxt/diwxv8udoAIw=
+github.com/ipni/go-libipni v0.5.9 h1:AlYlqZScX2jusGXXWkW5j6OMUtMKgQKNcl1Mi8g3glA=
+github.com/ipni/go-libipni v0.5.9/go.mod h1:c8mHa6J9iFREpDB29GlPIsbvztRq6bnhg5zJKrnvdUg=
 github.com/ipsn/go-secp256k1 v0.0.0-20180726113642-9d62b9f0bc52 h1:QG4CGBqCeuBo6aZlGAamSkxWdgWfZGeE49eUOWJPA4c=
 github.com/jackpal/go-nat-pmp v1.0.2 h1:KzKSgb7qkJvOUTqYl9/Hg/me3pWgBmERKrTGD7BdWus=
 github.com/jackpal/go-nat-pmp v1.0.2/go.mod h1:QPH045xvCAeXUZOxsnwmrtiCoxIr9eob+4orBN1SBKc=
@@ -376,8 +376,8 @@ github.com/multiformats/go-base36 v0.2.0 h1:lFsAbNOGeKtuKozrtBsAkSVhv1p9D0/qedU9
 github.com/multiformats/go-base36 v0.2.0/go.mod h1:qvnKE++v+2MWCfePClUEjE78Z7P2a1UV0xHgWc0hkp4=
 github.com/multiformats/go-multiaddr v0.1.1/go.mod h1:aMKBKNEYmzmDmxfX88/vz+J5IU55txyt0p4aiWVohjo=
 github.com/multiformats/go-multiaddr v0.2.0/go.mod h1:0nO36NvPpyV4QzvTLi/lafl2y95ncPj0vFwVF6k6wJ4=
-github.com/multiformats/go-multiaddr v0.12.0 h1:1QlibTFkoXJuDjjYsMHhE73TnzJQl8FSWatk/0gxGzE=
-github.com/multiformats/go-multiaddr v0.12.0/go.mod h1:WmZXgObOQOYp9r3cslLlppkrz1FYSHmE834dfz/lWu8=
+github.com/multiformats/go-multiaddr v0.12.1 h1:vm+BA/WZA8QZDp1pF1FWhi5CT3g1tbi5GJmqpb6wnlk=
+github.com/multiformats/go-multiaddr v0.12.1/go.mod h1:7mPkiBMmLeFipt+nNSq9pHZUeJSt8lHBgH6yhj0YQzE=
 github.com/multiformats/go-multiaddr-dns v0.3.1 h1:QgQgR+LQVt3NPTjbrLLpsaT2ufAA2y0Mkk+QRVJbW3A=
 github.com/multiformats/go-multiaddr-dns v0.3.1/go.mod h1:G/245BRQ6FJGmryJCrOuTdB37AMA5AMOVuO6NY3JwTk=
 github.com/multiformats/go-multiaddr-fmt v0.1.0 h1:WLEFClPycPkp4fnIzoFoV9FVd49/eQsuaL3/CWe167E=

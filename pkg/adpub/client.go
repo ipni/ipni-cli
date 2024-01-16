@@ -18,6 +18,8 @@ import (
 	"github.com/libp2p/go-libp2p/core/peer"
 )
 
+const syncSegmentSize = 2048
+
 type Client interface {
 	GetAdvertisement(context.Context, cid.Cid) (*Advertisement, error)
 	Close() error
@@ -81,7 +83,19 @@ func NewClient(addrInfo peer.AddrInfo, options ...Option) (Client, error) {
 }
 
 func (c *client) List(ctx context.Context, latestCid cid.Cid, n int, w io.Writer) error {
-	latestCid, err := c.sub.SyncAdChain(ctx, c.publisher, dagsync.WithHeadAdCid(latestCid), dagsync.ScopedDepthLimit(int64(n)))
+	opts := []dagsync.SyncOption{dagsync.WithHeadAdCid(latestCid), dagsync.ScopedDepthLimit(int64(n))}
+	if n > syncSegmentSize {
+		prevAdCid := func(adCid cid.Cid) (cid.Cid, error) {
+			ad, err := c.store.loadAd(ctx, adCid)
+			if err != nil {
+				return cid.Undef, err
+			}
+			return ad.PreviousCid(), nil
+		}
+		opts = append(opts, dagsync.ScopedSegmentDepthLimit(syncSegmentSize))
+		opts = append(opts, dagsync.ScopedBlockHook(dagsync.MakeGeneralBlockHook(prevAdCid)))
+	}
+	latestCid, err := c.sub.SyncAdChain(ctx, c.publisher, opts...)
 	if err != nil {
 		return err
 	}

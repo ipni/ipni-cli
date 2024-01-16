@@ -107,25 +107,16 @@ func (s *ClientStore) getEntriesChunk(ctx context.Context, target cid.Cid) (cid.
 	return next, chunk.Entries, nil
 }
 
-func (s *ClientStore) getAdvertisement(ctx context.Context, id cid.Cid) (*Advertisement, error) {
+func (s *ClientStore) loadAd(ctx context.Context, id cid.Cid) (schema.Advertisement, error) {
 	val, err := s.Batching.Get(ctx, datastore.NewKey(id.String()))
 	if err != nil {
-		return nil, err
+		return schema.Advertisement{}, err
 	}
+	return schema.BytesToAdvertisement(id, val)
+}
 
-	nb := schema.AdvertisementPrototype.NewBuilder()
-	decoder, err := multicodec.LookupDecoder(id.Prefix().Codec)
-	if err != nil {
-		return nil, err
-	}
-
-	err = decoder(nb, bytes.NewBuffer(val))
-	if err != nil {
-		return nil, err
-	}
-	node := nb.Build()
-
-	ad, err := schema.UnwrapAdvertisement(node)
+func (s *ClientStore) getAdvertisement(ctx context.Context, id cid.Cid) (*Advertisement, error) {
+	ad, err := s.loadAd(ctx, id)
 	if err != nil {
 		return nil, err
 	}
@@ -135,18 +126,13 @@ func (s *ClientStore) getAdvertisement(ctx context.Context, id cid.Cid) (*Advert
 		return nil, err
 	}
 
-	var prevCid cid.Cid
-	if ad.PreviousID != nil {
-		prevCid = ad.PreviousID.(cidlink.Link).Cid
-	}
-
 	a := &Advertisement{
 		ID:               id,
 		ProviderID:       dprovid,
 		ContextID:        ad.ContextID,
 		Metadata:         ad.Metadata,
 		Addresses:        ad.Addresses,
-		PreviousID:       prevCid,
+		PreviousID:       ad.PreviousCid(),
 		IsRemove:         ad.IsRm,
 		ExtendedProvider: ad.ExtendedProvider,
 	}
