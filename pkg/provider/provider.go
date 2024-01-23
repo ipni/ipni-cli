@@ -61,13 +61,13 @@ var providerFlags = []cli.Flag{
 		Usage: "Only show providers whose publisher ID is different from the provider ID.",
 	},
 	&cli.BoolFlag{
+		Name:  "error",
+		Usage: "Only show providers that have a LastError. If --count then show count of providers with LastError.",
+	},
+	&cli.BoolFlag{
 		Name:    "follow-dist",
 		Aliases: []string{"fd"},
 		Usage:   "Continue showing distance updates for providers",
-	},
-	&cli.BoolFlag{
-		Name:  "error",
-		Usage: "Only show providers that have a LastError. If --count then show count of providers with LastError.",
 	},
 	&cli.BoolFlag{
 		Name:  "id-only",
@@ -94,6 +94,11 @@ var providerFlags = []cli.Flag{
 		Aliases: []string{"adl"},
 		Usage:   "Limit on number of advertisements when finding distance. 0 for unlimited.",
 		Value:   5000,
+	},
+	&cli.BoolFlag{
+		Name:    "publisher",
+		Aliases: []string{"pub"},
+		Usage:   "Only print publisher address info.",
 	},
 	&cli.StringFlag{
 		Name:  "topic",
@@ -190,11 +195,6 @@ func getProvider(cctx *cli.Context, pc *pcache.ProviderCache, peerID peer.ID) er
 		return nil
 	}
 
-	if cctx.Bool("id-only") {
-		fmt.Println(prov.AddrInfo.ID)
-		return nil
-	}
-
 	showProviderInfo(cctx, prov)
 	return nil
 }
@@ -253,7 +253,6 @@ func listProviders(cctx *cli.Context, exclude map[peer.ID]struct{}) error {
 	}
 
 	diffPub := cctx.Bool("diff-pub")
-	idOnly := cctx.Bool("id-only")
 
 	for _, pinfo := range provs {
 		if _, ok := exclude[pinfo.AddrInfo.ID]; ok {
@@ -263,10 +262,6 @@ func listProviders(cctx *cli.Context, exclude map[peer.ID]struct{}) error {
 			continue
 		}
 		if diffPub && pinfo.AddrInfo.ID == pinfo.Publisher.ID {
-			continue
-		}
-		if idOnly {
-			fmt.Println(pinfo.AddrInfo.ID)
 			continue
 		}
 		showProviderInfo(cctx, pinfo)
@@ -314,6 +309,17 @@ func followDistance(cctx *cli.Context, include, exclude map[peer.ID]struct{}, pc
 }
 
 func showProviderInfo(cctx *cli.Context, pinfo *model.ProviderInfo) {
+	if cctx.Bool("id-only") {
+		fmt.Println(pinfo.AddrInfo.ID)
+		return
+	}
+	if cctx.Bool("publisher") {
+		if pinfo.Publisher != nil && len(pinfo.Publisher.Addrs) != 0 {
+			fmt.Printf("%s/p2p/%s\n", pinfo.Publisher.Addrs[0], pinfo.Publisher.ID)
+		}
+		return
+	}
+
 	fmt.Println("Provider", pinfo.AddrInfo.ID)
 	fmt.Println("    Addresses:", pinfo.AddrInfo.Addrs)
 	var adCidStr string
