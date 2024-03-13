@@ -106,6 +106,10 @@ ipni provider -i https://cid.contact -pid QmQzqxhK82kAmKvARFZSkUVS6fo9sySaiogAnx
 ```
 echo QmQzqxhK82kAmKvARFZSkUVS6fo9sySaiogAnx5EnZ6ZmC | ipni provider -i https://cid.contact
 ```
+- Get indexer's current ingestion distance, from the most recent published advertisement, for a provider:
+```sh
+ipni provider -i https://indexstar.prod.cid.contact -pid QmQzqxhK82kAmKvARFZSkUVS6fo9sySaiogAnx5EnZ6ZmC --distance
+```
 - Get information about the providers returned from find results:
 ```sh
 ipni find -i https://cid.contact --cid bafybeigvgzoolc3drupxhlevdp2ugqcrbcsqfmcek2zxiw5wctk3xjpjwy --id-only | ipni provider -i https://cid.contact
