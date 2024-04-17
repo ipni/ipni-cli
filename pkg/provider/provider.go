@@ -2,8 +2,10 @@ package provider
 
 import (
 	"bufio"
+	"context"
 	"errors"
 	"fmt"
+	"net/http"
 	"os"
 	"strings"
 	"time"
@@ -11,6 +13,7 @@ import (
 	"github.com/ipfs/go-cid"
 	"github.com/ipni/go-libipni/dagsync/ipnisync"
 	"github.com/ipni/go-libipni/find/model"
+	"github.com/ipni/go-libipni/maurl"
 	"github.com/ipni/go-libipni/mautil"
 	"github.com/ipni/go-libipni/pcache"
 	"github.com/ipni/ipni-cli/pkg/dtrack"
@@ -357,7 +360,7 @@ func showProviderInfo(cctx *cli.Context, pinfo *model.ProviderInfo) {
 				proto = fmt.Sprintf("Error: %s", err)
 			} else {
 				defer p2pHost.Close()
-				proto, err = getProtocol(*pinfo.Publisher, p2pHost)
+				proto, err = getProtocol(cctx.Context, *pinfo.Publisher, p2pHost)
 				if err != nil {
 					proto = fmt.Sprintf("Error: %s", err)
 				}
@@ -399,7 +402,7 @@ func showProviderInfo(cctx *cli.Context, pinfo *model.ProviderInfo) {
 	fmt.Println()
 }
 
-func getProtocol(peerInfo peer.AddrInfo, p2pHost host.Host) (string, error) {
+func getProtocol(ctx context.Context, peerInfo peer.AddrInfo, p2pHost host.Host) (string, error) {
 	clientHost := &libp2phttp.Host{
 		StreamHost: p2pHost,
 	}
@@ -426,6 +429,20 @@ func getProtocol(peerInfo peer.AddrInfo, p2pHost host.Host) (string, error) {
 		if len(httpAddrs) == 0 {
 			return "data-transfer/graphsync", nil
 		}
+		u, err := maurl.ToURL(peerInfo.Addrs[0])
+		if err != nil {
+			return "", err
+		}
+		fetchURL := u.JoinPath(ipnisync.IPNIPath, "head")
+		req, err := http.NewRequestWithContext(ctx, "GET", fetchURL.String(), nil)
+		if err != nil {
+			return "", err
+		}
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			return "", err
+		}
+		resp.Body.Close()
 		return "http", nil
 	}
 	return "libp2phttp", nil
