@@ -58,8 +58,9 @@ var providerFlags = []cli.Flag{
 		Usage: "Count all providers and output only the count. Implies --all",
 	},
 	&cli.BoolFlag{
-		Name:  "distance",
-		Usage: "Calculate distance from last seen advertisement to provider's current head advertisement",
+		Name:    "distance",
+		Usage:   "Calculate distance from last seen advertisement to provider's current head advertisement",
+		Aliases: []string{"dist"},
 	},
 	&cli.BoolFlag{
 		Name:  "diff-pub",
@@ -103,7 +104,7 @@ var providerFlags = []cli.Flag{
 	&cli.BoolFlag{
 		Name:    "protocol",
 		Aliases: []string{"proto"},
-		Usage:   "Print publisher protocol.",
+		Usage:   "Print publisher's protocol used to publish advertisements.",
 	},
 	&cli.BoolFlag{
 		Name:    "publisher",
