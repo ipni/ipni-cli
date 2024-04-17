@@ -9,10 +9,15 @@ import (
 	"time"
 
 	"github.com/ipfs/go-cid"
+	"github.com/ipni/go-libipni/dagsync/ipnisync"
 	"github.com/ipni/go-libipni/find/model"
+	"github.com/ipni/go-libipni/mautil"
 	"github.com/ipni/go-libipni/pcache"
 	"github.com/ipni/ipni-cli/pkg/dtrack"
+	"github.com/libp2p/go-libp2p"
+	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/libp2p/go-libp2p/core/peer"
+	libp2phttp "github.com/libp2p/go-libp2p/p2p/http"
 	"github.com/mattn/go-isatty"
 	"github.com/urfave/cli/v2"
 )
@@ -94,6 +99,11 @@ var providerFlags = []cli.Flag{
 		Aliases: []string{"adl"},
 		Usage:   "Limit on number of advertisements when finding distance. 0 for unlimited.",
 		Value:   5000,
+	},
+	&cli.BoolFlag{
+		Name:    "protocol",
+		Aliases: []string{"proto"},
+		Usage:   "Print publisher protocol.",
 	},
 	&cli.BoolFlag{
 		Name:    "publisher",
@@ -320,6 +330,8 @@ func showProviderInfo(cctx *cli.Context, pinfo *model.ProviderInfo) {
 		return
 	}
 
+	var p2pHost host.Host
+
 	fmt.Println("Provider", pinfo.AddrInfo.ID)
 	fmt.Println("    Addresses:", pinfo.AddrInfo.Addrs)
 	var adCidStr string
@@ -336,6 +348,21 @@ func showProviderInfo(cctx *cli.Context, pinfo *model.ProviderInfo) {
 	if pinfo.Publisher != nil {
 		fmt.Println("    Publisher:", pinfo.Publisher.ID)
 		fmt.Println("        Publisher Addrs:", pinfo.Publisher.Addrs)
+		if cctx.Bool("protocol") {
+			var proto string
+			var err error
+			p2pHost, err = libp2p.New()
+			if err != nil {
+				proto = fmt.Sprintf("Error: %s", err)
+			} else {
+				defer p2pHost.Close()
+				proto, err = getProtocol(*pinfo.Publisher, p2pHost)
+				if err != nil {
+					proto = fmt.Sprintf("Error: %s", err)
+				}
+			}
+			fmt.Println("        Publisher protocol:", proto)
+		}
 		if pinfo.FrozenAt.Defined() {
 			fmt.Println("    FrozenAt:", pinfo.FrozenAt.String())
 		}
@@ -358,7 +385,7 @@ func showProviderInfo(cctx *cli.Context, pinfo *model.ProviderInfo) {
 
 	if cctx.Bool("distance") {
 		fmt.Print("    Distance to head advertisement: ")
-		dist, _, err := getLastSeenDistance(cctx, pinfo)
+		dist, _, err := getLastSeenDistance(cctx, pinfo, p2pHost)
 		if err != nil {
 			fmt.Println("error:", err)
 		} else if dist == -1 {
@@ -371,7 +398,39 @@ func showProviderInfo(cctx *cli.Context, pinfo *model.ProviderInfo) {
 	fmt.Println()
 }
 
-func getLastSeenDistance(cctx *cli.Context, pinfo *model.ProviderInfo) (int, cid.Cid, error) {
+func getProtocol(peerInfo peer.AddrInfo, p2pHost host.Host) (string, error) {
+	clientHost := &libp2phttp.Host{
+		StreamHost: p2pHost,
+	}
+
+	peerInfo = mautil.CleanPeerAddrInfo(peerInfo)
+	if len(peerInfo.Addrs) == 0 {
+		if clientHost.StreamHost == nil {
+			return "", errors.New("no peer addrs and no stream host")
+		}
+		peerStore := clientHost.StreamHost.Peerstore()
+		if peerStore == nil {
+			return "", errors.New("no peer addrs and no stream host peerstore")
+		}
+		peerInfo.Addrs = peerStore.Addrs(peerInfo.ID)
+		if len(peerInfo.Addrs) == 0 {
+			return "", errors.New("no peer addrs and none found in peertore")
+		}
+	}
+
+	_, err := clientHost.NamespacedClient(ipnisync.ProtocolID, peerInfo)
+	clientHost.Close()
+	if err != nil {
+		httpAddrs := mautil.FindHTTPAddrs(peerInfo.Addrs)
+		if len(httpAddrs) == 0 {
+			return "data-transfer/graphsync", nil
+		}
+		return "http", nil
+	}
+	return "libp2phttp", nil
+}
+
+func getLastSeenDistance(cctx *cli.Context, pinfo *model.ProviderInfo, p2pHost host.Host) (int, cid.Cid, error) {
 	if pinfo.Publisher == nil {
 		return 0, cid.Undef, errors.New("no publisher listed")
 	}
@@ -380,7 +439,8 @@ func getLastSeenDistance(cctx *cli.Context, pinfo *model.ProviderInfo) (int, cid
 	}
 	adDist, err := dtrack.NewAdDistance(
 		dtrack.WithDepthLimit(cctx.Int64("ad-depth-limit")),
-		dtrack.WithTopic(cctx.String("topic")))
+		dtrack.WithTopic(cctx.String("topic")),
+		dtrack.WithP2pHost(p2pHost))
 	if err != nil {
 		return 0, cid.Undef, err
 	}
