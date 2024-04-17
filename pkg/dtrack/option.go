@@ -31,6 +31,14 @@ func WithDepthLimit(limit int64) Option {
 	}
 }
 
+// WithP2pHost configures the libp2p host to use for connection to the
+// advertisement publisher.
+func WithP2pHost(p2pHost host.Host) Option {
+	return func(c *config) {
+		c.p2pHost = p2pHost
+	}
+}
+
 // WithTopic configures the topic name used to get the head advertisement when
 // using data-transfer/graphsync.
 func WithTopic(topic string) Option {
