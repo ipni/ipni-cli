@@ -9,8 +9,8 @@ require (
 	github.com/ipfs/go-log/v2 v2.5.1
 	github.com/ipld/go-car/v2 v2.13.1
 	github.com/ipld/go-ipld-prime v0.21.0
-	github.com/ipni/go-libipni v0.5.19
-	github.com/libp2p/go-libp2p v0.34.0
+	github.com/ipni/go-libipni v0.5.20
+	github.com/libp2p/go-libp2p v0.35.1
 	github.com/mattn/go-isatty v0.0.20
 	github.com/montanaflynn/stats v0.7.0
 	github.com/multiformats/go-multiaddr v0.12.4
@@ -110,7 +110,7 @@ require (
 	github.com/petar/GoLLRB v0.0.0-20210522233825-ae3b015fd3e9 // indirect
 	github.com/pion/datachannel v1.5.6 // indirect
 	github.com/pion/dtls/v2 v2.2.11 // indirect
-	github.com/pion/ice/v2 v2.3.24 // indirect
+	github.com/pion/ice/v2 v2.3.25 // indirect
 	github.com/pion/interceptor v0.1.29 // indirect
 	github.com/pion/logging v0.2.2 // indirect
 	github.com/pion/mdns v0.0.12 // indirect
