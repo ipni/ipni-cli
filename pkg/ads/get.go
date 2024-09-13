@@ -10,6 +10,7 @@ import (
 
 	"github.com/ipfs/go-cid"
 	"github.com/ipfs/go-datastore"
+	"github.com/ipni/go-libipni/metadata"
 	"github.com/ipni/ipni-cli/pkg/adpub"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/mattn/go-isatty"
@@ -50,6 +51,11 @@ var adsGetFlags = []cli.Flag{
 		Name:    "print-entries",
 		Usage:   "Whether to print the list of entries in advertisement",
 		Aliases: []string{"e"},
+	},
+	&cli.BoolFlag{
+		Name:    "skip-entries",
+		Usage:   "Skip syncing entries",
+		Aliases: []string{"se"},
 	},
 	&cli.Int64Flag{
 		Name:        "entries-depth-limit",
@@ -126,10 +132,8 @@ func adsGetAction(cctx *cli.Context) error {
 		return err
 	}
 
-	for i, adCid := range adCids {
-		if i != 0 {
-			fmt.Println()
-		}
+	for _, adCid := range adCids {
+		fmt.Println()
 
 		ad, err := pubClient.GetAdvertisement(cctx.Context, adCid)
 		if err != nil {
@@ -147,12 +151,29 @@ func adsGetAction(cctx *cli.Context) error {
 		if ad.PreviousID != cid.Undef {
 			prevCID = ad.PreviousID.String()
 		}
+
+		var mdProtos []string
+		if len(ad.Metadata) != 0 {
+			md := metadata.Default.New()
+			err = md.UnmarshalBinary(ad.Metadata)
+			if err == nil {
+				for _, p := range md.Protocols() {
+					mdProtos = append(mdProtos, p.String())
+				}
+			}
+		}
+
 		fmt.Printf("PreviousCID:  %s\n", prevCID)
 		fmt.Printf("ProviderID:   %s\n", ad.ProviderID)
 		fmt.Printf("ContextID:    %s\n", base64.StdEncoding.EncodeToString(ad.ContextID))
 		fmt.Printf("Addresses:    %v\n", ad.Addresses)
 		fmt.Printf("Is Remove:    %v\n", ad.IsRemove)
-		fmt.Printf("Metadata:     %s\n", base64.StdEncoding.EncodeToString(ad.Metadata))
+		fmt.Print("Metadata:     ")
+		if len(mdProtos) != 0 {
+			fmt.Println(strings.Join(mdProtos, " "))
+		} else {
+			fmt.Println(base64.StdEncoding.EncodeToString(ad.Metadata))
+		}
 
 		fmt.Println("Extended Providers:")
 		if ad.ExtendedProvider != nil {
@@ -196,15 +217,19 @@ func adsGetAction(cctx *cli.Context) error {
 			continue
 		}
 
-		// Sync entries if not a removal advertisement and has entries.
-		if ad.HasEntries() {
-			err = pubClient.SyncEntriesWithRetry(cctx.Context, ad.Entries.Root())
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "⚠️  Failed to sync entries for advertisement %s: %s\n", ad.ID, err)
-				continue
-			}
-		} else {
+		if !ad.HasEntries() {
 			fmt.Println("No entries")
+			continue
+		}
+
+		if cctx.Bool("skip-entries") {
+			continue
+		}
+
+		// Sync entries if not a removal advertisement and has entries.
+		err = pubClient.SyncEntriesWithRetry(cctx.Context, ad.Entries.Root())
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "⚠️  Failed to sync entries for advertisement %s: %s\n", ad.ID, err)
 			continue
 		}
 
