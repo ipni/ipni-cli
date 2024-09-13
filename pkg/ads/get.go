@@ -151,12 +151,15 @@ func adsGetAction(cctx *cli.Context) error {
 		if ad.PreviousID != cid.Undef {
 			prevCID = ad.PreviousID.String()
 		}
+
 		var mdProtos []string
-		md := metadata.Default.New()
-		err = md.UnmarshalBinary(ad.Metadata)
-		if err == nil {
-			for _, p := range md.Protocols() {
-				mdProtos = append(mdProtos, p.String())
+		if len(ad.Metadata) != 0 {
+			md := metadata.Default.New()
+			err = md.UnmarshalBinary(ad.Metadata)
+			if err == nil {
+				for _, p := range md.Protocols() {
+					mdProtos = append(mdProtos, p.String())
+				}
 			}
 		}
 
