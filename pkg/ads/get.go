@@ -132,10 +132,8 @@ func adsGetAction(cctx *cli.Context) error {
 		return err
 	}
 
-	for i, adCid := range adCids {
-		if i != 0 {
-			fmt.Println()
-		}
+	for _, adCid := range adCids {
+		fmt.Println()
 
 		ad, err := pubClient.GetAdvertisement(cctx.Context, adCid)
 		if err != nil {
@@ -167,9 +165,11 @@ func adsGetAction(cctx *cli.Context) error {
 		fmt.Printf("ContextID:    %s\n", base64.StdEncoding.EncodeToString(ad.ContextID))
 		fmt.Printf("Addresses:    %v\n", ad.Addresses)
 		fmt.Printf("Is Remove:    %v\n", ad.IsRemove)
-		fmt.Printf("Metadata:     %s\n", base64.StdEncoding.EncodeToString(ad.Metadata))
+		fmt.Print("Metadata:     ")
 		if len(mdProtos) != 0 {
-			fmt.Printf("  Protocols: %s\n", strings.Join(mdProtos, " "))
+			fmt.Println(strings.Join(mdProtos, " "))
+		} else {
+			fmt.Println(base64.StdEncoding.EncodeToString(ad.Metadata))
 		}
 
 		fmt.Println("Extended Providers:")
