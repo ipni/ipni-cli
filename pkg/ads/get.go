@@ -146,14 +146,23 @@ func adsGetAction(cctx *cli.Context) error {
 			fmt.Fprintf(os.Stderr, "⚠️  Failed to fully sync advertisement %s. Output shows partially synced ad.\n  Error: %s\n", adCid, err.Error())
 		}
 
-		fmt.Printf("CID:          %s\n", ad.ID)
+		fmt.Println("CID:", ad.ID)
 		var prevCID string
 		if ad.PreviousID != cid.Undef {
 			prevCID = ad.PreviousID.String()
 		}
 
-		var mdProtos []string
-		if len(ad.Metadata) != 0 {
+		fmt.Println("PreviousCID:", prevCID)
+		fmt.Println("ProviderID:", ad.ProviderID)
+		fmt.Println("ContextID:", base64.StdEncoding.EncodeToString(ad.ContextID))
+		fmt.Println("Addresses:", ad.Addresses)
+		fmt.Println("Is Remove:", ad.IsRemove)
+		fmt.Print("Metadata: ")
+		if len(ad.Metadata) == 0 {
+			fmt.Println("none")
+		} else {
+			fmt.Println(base64.StdEncoding.EncodeToString(ad.Metadata))
+			var mdProtos []string
 			md := metadata.Default.New()
 			err = md.UnmarshalBinary(ad.Metadata)
 			if err == nil {
@@ -161,35 +170,27 @@ func adsGetAction(cctx *cli.Context) error {
 					mdProtos = append(mdProtos, p.String())
 				}
 			}
-		}
-
-		fmt.Printf("PreviousCID:  %s\n", prevCID)
-		fmt.Printf("ProviderID:   %s\n", ad.ProviderID)
-		fmt.Printf("ContextID:    %s\n", base64.StdEncoding.EncodeToString(ad.ContextID))
-		fmt.Printf("Addresses:    %v\n", ad.Addresses)
-		fmt.Printf("Is Remove:    %v\n", ad.IsRemove)
-		fmt.Print("Metadata:     ")
-		if len(mdProtos) != 0 {
-			fmt.Println(strings.Join(mdProtos, " "))
-		} else {
-			fmt.Println(base64.StdEncoding.EncodeToString(ad.Metadata))
+			if len(mdProtos) != 0 {
+				fmt.Print("  Protocols: ")
+				fmt.Println(strings.Join(mdProtos, " "))
+			}
 		}
 
 		fmt.Println("Extended Providers:")
 		if ad.ExtendedProvider != nil {
-			fmt.Printf("   Override: %v\n", ad.ExtendedProvider.Override)
-			fmt.Println("   Providers:")
+			fmt.Printf("  Override: %v\n", ad.ExtendedProvider.Override)
+			fmt.Println("  Providers:")
 			if len(ad.ExtendedProvider.Providers) != 0 {
 				for i, ep := range ad.ExtendedProvider.Providers {
-					fmt.Printf("    %d. ID:         %v\n", i+1, ep.ID)
-					fmt.Printf("        Addresses:  %v\n", ep.Addresses)
-					fmt.Printf("        Metadata:   %v\n", base64.StdEncoding.EncodeToString(ep.Metadata))
+					fmt.Printf("   %d. ID:         %v\n", i+1, ep.ID)
+					fmt.Printf("       Addresses:  %v\n", ep.Addresses)
+					fmt.Printf("       Metadata:   %v\n", base64.StdEncoding.EncodeToString(ep.Metadata))
 				}
 			} else {
-				fmt.Println("      None")
+				fmt.Println("     None")
 			}
 		} else {
-			fmt.Println("   None")
+			fmt.Println("  None")
 		}
 		fmt.Print("Signature: ")
 		if ad.SigErr != nil {
