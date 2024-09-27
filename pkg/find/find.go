@@ -41,6 +41,7 @@ var findFlags = []cli.Flag{
 		Name:    "indexer",
 		Usage:   "URL of indexer to query. Multiple OK to specify providers info sources for dhstore.",
 		Aliases: []string{"i"},
+		Value:   cli.NewStringSlice("https://cid.contact"),
 	},
 	&cli.StringFlag{
 		Name:    "dhstore",
@@ -176,17 +177,20 @@ func printResults(cctx *cli.Context, resp *model.FindResponse) error {
 			fmt.Println("  Provider:", provStr)
 			for _, pr := range prs {
 				fmt.Println("    ContextID:", base64.StdEncoding.EncodeToString(pr.ContextID))
-				fmt.Println("      Metadata:", decodeMetadata(pr.Metadata))
+				fmt.Print("      Metadata: ")
+				if len(pr.Metadata) == 0 {
+					fmt.Println("none")
+				} else {
+					fmt.Println(base64.StdEncoding.EncodeToString(pr.Metadata))
+					fmt.Println("        Protocols:", decodeMetadataProtos(pr.Metadata))
+				}
 			}
 		}
 	}
 	return nil
 }
 
-func decodeMetadata(metaBytes []byte) string {
-	if len(metaBytes) == 0 {
-		return "nil"
-	}
+func decodeMetadataProtos(metaBytes []byte) string {
 	meta := metadata.Default.New()
 	err := meta.UnmarshalBinary(metaBytes)
 	if err != nil {

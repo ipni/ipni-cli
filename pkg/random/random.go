@@ -33,10 +33,10 @@ var RandomCmd = &cli.Command{
 
 var randomFlags = []cli.Flag{
 	&cli.StringSliceFlag{
-		Name:     "indexer",
-		Usage:    "Indexer URL. Specifying multiple results in a unified view of providers across all.",
-		Aliases:  []string{"i"},
-		Required: true,
+		Name:    "indexer",
+		Usage:   "Indexer URL. Specifying multiple results in a unified view of providers across all.",
+		Aliases: []string{"i"},
+		Value:   cli.NewStringSlice("https://cid.contact"),
 	},
 	&cli.StringSliceFlag{
 		Name:  "pid",
