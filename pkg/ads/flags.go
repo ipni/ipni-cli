@@ -8,9 +8,10 @@ import (
 
 var addrInfoFlag = &cli.StringFlag{
 	Name: "addr-info",
-	Usage: "Publisher's address info in form of libp2p multiaddr info.\n" +
-		"Example ipnisync: /ip4/1.2.3.4/tcp/1234/p2p/12D3KooWE8yt84RVwW3sFcd6WMjbUdWrZer2YtT4dmtj3dHdahSZ\n" +
-		"Example HTTP:     /ip4/1.2.3.4/tcp/1234/http/p2p/12D3KooWE8yt84RVwW3sFcd6WMjbUdWrZer2YtT4dmtj3dHdahSZ",
+	Usage: "Publisher's address info in form of libp2p multiaddr info. Examples:\n" +
+		"ipnisync:  /ip4/1.2.3.4/tcp/1234/p2p/12D3KooWE8yt84RVwW3sFcd6WMjbUdWrZer2YtT4dmtj3dHdahSZ\n" +
+		"HTTP:      /ip4/1.2.3.4/tcp/1234/http/p2p/12D3KooWE8yt84RVwW3sFcd6WMjbUdWrZer2YtT4dmtj3dHdahSZ\n" +
+		"HTTP path: /ip4/1.2.3.4/tcp/1234/http/http-path/myprovidrs%2Fprov1/p2p/12D3KooWE8yt84RVwW3sFcd6WMjbUdWrZer2YtT4dmtj3dHdahSZ",
 	Aliases:  []string{"ai"},
 	Required: true,
 }
