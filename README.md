@@ -62,6 +62,7 @@ ipni ads get --ai=/ip4/76.219.232.45/tcp/24001/p2p/12D3KooWPNbkEgjdBNeaCGpsgCrPR
 ```sh
 cat ad-cids-list.txt | ipni add get /dns4/ads.example.com/tcp/24001/p2p/<publisher-p2p-id>
 ```
+
 ### `ads list`
 - List the 10 most recent advertisements from a provider:
 ```sh
@@ -80,6 +81,8 @@ ipni ads dist --ai=/ip4/76.219.232.45/tcp/24001/p2p/12D3KooWPNbkEgjdBNeaCGpsgCrP
     --start=baguqeera3aylz3gkoxtkmqdwulxlaqbudf7nhdomfpyjqij236pwehrngngq \
     --end=baguqeerage4rh6yqy4u37x7i337q57wrwfls5ihiei6l72rr6ezrw5vcucea
 ```
+
+**Note* To include an HTTP path prefix in the `addr-info` flag of the `ads` command, include the `http-path` component in the multiaddr. For example, `--ai /dns/pool.example.com/https/http-path/eu%2Fprovider1/p2p/12D3KooWPMGfQs5CaJKG4yCxVWizWBRtB85gEUwiX2ekStvYvqgp` fetches ads from `https://pool.example.com/eu/provider1/ipni/v1/ad/head`. Any "/" within the http-path must be escaped.
 
 ### `find`
 - Ask cid.contact where to find CID `bafybeigvgzoolc3drupxhlevdp2ugqcrbcsqfmcek2zxiw5wctk3xjpjwy`:
