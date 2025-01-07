@@ -59,12 +59,6 @@ var randomFlags = []cli.Flag{
 		Usage:   "Only print multihashes and do not print descriptive output.",
 		Aliases: []string{"q"},
 	},
-	&cli.StringFlag{
-		Name:    "topic",
-		Usage:   "Topic on which index advertisements are published. Only needed if connecting via Graphsync with non-standard topic.",
-		Value:   "/indexer/ingest/mainnet",
-		Aliases: []string{"t"},
-	},
 }
 
 func randomAction(ctx context.Context, cmd *cli.Command) error {
@@ -104,7 +98,7 @@ func randomAction(ctx context.Context, cmd *cli.Command) error {
 			fmt.Fprintf(os.Stderr, "Provider %s has no publisher\n", peerID)
 			continue
 		}
-		err = RandomMultihashes(ctx, *prov.Publisher, cmd.String("topic"), adCount, mhsCount, cmd.Bool("quiet"))
+		err = RandomMultihashes(ctx, *prov.Publisher, adCount, mhsCount, cmd.Bool("quiet"))
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Cannot get random multihashes from provider %s: %s\n", peerID, err)
 			continue
@@ -130,9 +124,8 @@ func getProvider(ctx context.Context, pc *pcache.ProviderCache, peerID peer.ID) 
 	return prov, nil
 }
 
-func RandomMultihashes(ctx context.Context, addrInfo peer.AddrInfo, topic string, adCount, mhsCount int, quiet bool) error {
+func RandomMultihashes(ctx context.Context, addrInfo peer.AddrInfo, adCount, mhsCount int, quiet bool) error {
 	provClient, err := adpub.NewClient(addrInfo,
-		adpub.WithTopicName(topic),
 		adpub.WithEntriesDepthLimit(1),
 	)
 	if err != nil {

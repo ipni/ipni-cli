@@ -40,7 +40,6 @@ var adsDistFlags = []cli.Flag{
 		Aliases: []string{"dl"},
 		Value:   5000,
 	},
-	topicFlag,
 }
 
 func adsDistAction(ctx context.Context, cmd *cli.Command) error {
@@ -54,9 +53,7 @@ func adsDistAction(ctx context.Context, cmd *cli.Command) error {
 		return fmt.Errorf("bad start cid: %w", err)
 	}
 
-	adDist, err := dtrack.NewAdDistance(
-		dtrack.WithTopic(cmd.String("topic")),
-		dtrack.WithDepthLimit(cmd.Int64("dist-limit")))
+	adDist, err := dtrack.NewAdDistance(dtrack.WithDepthLimit(cmd.Int64("dist-limit")))
 	if err != nil {
 		return err
 	}
