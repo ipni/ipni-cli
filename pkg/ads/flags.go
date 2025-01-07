@@ -23,10 +23,3 @@ var timeoutFlag = &cli.DurationFlag{
 	Value:       10 * time.Second,
 	DefaultText: "10s",
 }
-
-var topicFlag = &cli.StringFlag{
-	Name:    "topic",
-	Usage:   "Topic on which index advertisements are published. Only needed if connecting via Graphsync with non-standard topic.",
-	Value:   "/indexer/ingest/mainnet",
-	Aliases: []string{"t"},
-}

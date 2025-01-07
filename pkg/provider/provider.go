@@ -114,11 +114,6 @@ var providerFlags = []cli.Flag{
 		Aliases: []string{"pub"},
 		Usage:   "Only print publisher address info.",
 	},
-	&cli.StringFlag{
-		Name:  "topic",
-		Usage: "Topic on which index advertisements are published. Only needed to get head advertisement via Graphsync with non-standard topic.",
-		Value: "/indexer/ingest/mainnet",
-	},
 }
 
 func providerAction(cctx *cli.Context) error {
@@ -302,7 +297,7 @@ func followDistance(cctx *cli.Context, include, exclude map[peer.ID]struct{}, pc
 	fmt.Fprintln(os.Stderr, "Showing provider distance updates, ctrl-c to cancel...")
 	limit := cctx.Int64("ad-depth-limit")
 	updates, err := dtrack.RunDistanceTracker(cctx.Context, include, exclude, pc, trackUpdateIn, timeout,
-		dtrack.WithDepthLimit(limit), dtrack.WithTopic(cctx.String("topic")))
+		dtrack.WithDepthLimit(limit))
 	if err != nil {
 		return err
 	}
@@ -457,7 +452,6 @@ func getLastSeenDistance(cctx *cli.Context, pinfo *model.ProviderInfo, p2pHost h
 	}
 	adDist, err := dtrack.NewAdDistance(
 		dtrack.WithDepthLimit(cctx.Int64("ad-depth-limit")),
-		dtrack.WithTopic(cctx.String("topic")),
 		dtrack.WithP2pHost(p2pHost))
 	if err != nil {
 		return 0, cid.Undef, err
