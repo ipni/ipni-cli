@@ -39,7 +39,6 @@ type client struct {
 	publisher peer.AddrInfo
 	host      host.Host
 	ownsHost  bool
-	topic     string
 
 	store *ClientStore
 	sub   *dagsync.Subscriber
@@ -73,12 +72,11 @@ func NewClient(addrInfo peer.AddrInfo, options ...Option) (Client, error) {
 		publisher: addrInfo,
 		host:      opts.p2pHost,
 		ownsHost:  ownsHost,
-		topic:     opts.topic,
 
 		store: newClientStore(opts.delAfterRead),
 	}
 
-	c.sub, err = dagsync.NewSubscriber(c.host, c.store.Batching, c.store.LinkSystem, c.topic, dagsync.HttpTimeout(opts.httpTimeout))
+	c.sub, err = dagsync.NewSubscriber(c.host, c.store.LinkSystem, dagsync.HttpTimeout(opts.httpTimeout))
 	if err != nil {
 		return nil, err
 	}

@@ -123,11 +123,6 @@ var providerFlags = []cli.Flag{
 		Name:  "spid",
 		Usage: "Print the provider's Filecoin storage provider ID. Optionally usable with --id-only.",
 	},
-	&cli.StringFlag{
-		Name:  "topic",
-		Usage: "Topic on which index advertisements are published. Only needed to get head advertisement via Graphsync with non-standard topic.",
-		Value: "/indexer/ingest/mainnet",
-	},
 }
 
 func providerAction(ctx context.Context, cmd *cli.Command) error {
@@ -311,7 +306,7 @@ func followDistance(ctx context.Context, cmd *cli.Command, include, exclude map[
 	fmt.Fprintln(os.Stderr, "Showing provider distance updates, ctrl-c to cancel...")
 	limit := cmd.Int64("ad-depth-limit")
 	updates, err := dtrack.RunDistanceTracker(ctx, include, exclude, pc, trackUpdateIn, timeout,
-		dtrack.WithDepthLimit(limit), dtrack.WithTopic(cmd.String("topic")))
+		dtrack.WithDepthLimit(limit))
 	if err != nil {
 		return err
 	}
@@ -484,7 +479,6 @@ func getLastSeenDistance(ctx context.Context, cmd *cli.Command, pinfo *model.Pro
 	}
 	adDist, err := dtrack.NewAdDistance(
 		dtrack.WithDepthLimit(cmd.Int64("ad-depth-limit")),
-		dtrack.WithTopic(cmd.String("topic")),
 		dtrack.WithP2pHost(p2pHost))
 	if err != nil {
 		return 0, cid.Undef, err
