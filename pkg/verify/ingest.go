@@ -42,11 +42,9 @@ sources:
 - Path to a CAR file (i.e. --from-car)
 - Path to a CARv2 index file in iterable multihash format (i.e. --from-car-index)
 
-If fetching multihashes from an advertisement publisher, then the "topic" flag can specify the topic
-name is the advertisements are published on a non-standard topic. The user may optionally specify an
-advertisement CID, or to use the latest advertisement seen by the indexer, as the source of
-multihash entries. If not specified, the latest advertisement is fetched from the publisher and its
-entries are used as the source of multihashes.
+The user may optionally specify an advertisement CID, or to use the latestadvertisement seen by the
+indexer, as the source of multihash entries. If a CID is not specified then the latest advertisement
+is fetched from the publisher and its entries are used as the source of multihashes.
 
 The path to CAR files may point to any CAR version (CARv1 or CARv2). The list of multihashes are
 generated automatically from the CAR payload if no suitable index is present.
@@ -175,12 +173,6 @@ var verifyIngestFlags = []cli.Flag{
 		Usage: "The number multihashes in each lookup request to the indexer. " +
 			"A smaller batch size will increase the number of requests to the indexer but may avoid timing out waiting for a response.",
 		Value: 4096,
-	},
-	&cli.StringFlag{
-		Name:    "topic",
-		Usage:   "The topic name on which advertisements are published. Only takes effect if multihashes read from publisher.",
-		Value:   "/indexer/ingest/mainnet",
-		Aliases: []string{"t"},
 	},
 	&cli.BoolFlag{
 		Name:        "print-unindexed-mhs",
@@ -331,11 +323,9 @@ func verifyIngestFromProvider(cctx *cli.Context, provID peer.ID) error {
 	}
 	fmt.Println("Publisher:", pubAddrInfo.String())
 	fmt.Printf("Ads/Entries depth: %s/%d\n", adDepthLimitStr, cctx.Int64("entries-depth-limit"))
-	fmt.Println("Topic:", cctx.String("topic"))
 	fmt.Println("Last ad seen by indexer:", provInfo.LastAdvertisement.String())
 
 	pubClient, err := adpub.NewClient(pubAddrInfo,
-		adpub.WithTopicName(cctx.String("topic")),
 		adpub.WithEntriesDepthLimit(cctx.Int64("entries-depth-limit")))
 	if err != nil {
 		return err

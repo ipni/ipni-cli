@@ -39,7 +39,6 @@ var adsDistFlags = []cli.Flag{
 		Aliases: []string{"dl"},
 		Value:   5000,
 	},
-	topicFlag,
 }
 
 func adsDistAction(cctx *cli.Context) error {
@@ -54,7 +53,6 @@ func adsDistAction(cctx *cli.Context) error {
 	}
 
 	adDist, err := dtrack.NewAdDistance(
-		dtrack.WithTopic(cctx.String("topic")),
 		dtrack.WithDepthLimit(cctx.Int64("dist-limit")))
 	if err != nil {
 		return err
