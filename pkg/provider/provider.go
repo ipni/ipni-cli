@@ -3,9 +3,12 @@ package provider
 import (
 	"bufio"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"strings"
 	"time"
@@ -24,6 +27,8 @@ import (
 	"github.com/mattn/go-isatty"
 	"github.com/urfave/cli/v2"
 )
+
+const filfoxPeerAPI = "https://filfox.info/api/v1/peer"
 
 var ProviderCmd = &cli.Command{
 	Name:  "provider",
@@ -113,6 +118,10 @@ var providerFlags = []cli.Flag{
 		Name:    "publisher",
 		Aliases: []string{"pub"},
 		Usage:   "Only print publisher address info.",
+	},
+	&cli.BoolFlag{
+		Name:  "spid",
+		Usage: "Print the provider's Filecoin storage provider ID.",
 	},
 	&cli.StringFlag{
 		Name:  "topic",
@@ -324,7 +333,17 @@ func followDistance(cctx *cli.Context, include, exclude map[peer.ID]struct{}, pc
 
 func showProviderInfo(cctx *cli.Context, pinfo *model.ProviderInfo) {
 	if cctx.Bool("id-only") {
-		fmt.Println(pinfo.AddrInfo.ID)
+		if cctx.Bool("spid") {
+			fmt.Print()
+			miners, err := getSPID(cctx.Context, pinfo.AddrInfo.ID)
+			if err != nil {
+				miners = err.Error()
+			}
+			fmt.Println(pinfo.AddrInfo.ID, "   ", miners)
+		} else {
+			fmt.Println(pinfo.AddrInfo.ID)
+		}
+
 		return
 	}
 	if cctx.Bool("publisher") {
@@ -399,6 +418,14 @@ func showProviderInfo(cctx *cli.Context, pinfo *model.ProviderInfo) {
 		}
 	}
 
+	if cctx.Bool("spid") {
+		miners, err := getSPID(cctx.Context, pinfo.AddrInfo.ID)
+		if err != nil {
+			miners = fmt.Sprint("error:", err)
+		}
+		fmt.Println("    SPID:", miners)
+	}
+
 	fmt.Println()
 }
 
@@ -465,4 +492,42 @@ func getLastSeenDistance(cctx *cli.Context, pinfo *model.ProviderInfo, p2pHost h
 	defer adDist.Close()
 
 	return adDist.Get(cctx.Context, *pinfo.Publisher, pinfo.LastAdvertisement, cid.Undef)
+}
+
+func getSPID(ctx context.Context, peerID peer.ID) (string, error) {
+	apiURL, err := url.JoinPath(filfoxPeerAPI, peerID.String())
+	if err != nil {
+		return "", err
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, apiURL, nil)
+	if err != nil {
+		return "", err
+	}
+	req.Header.Add("Accept-Encoding", "application/json")
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode == http.StatusNotFound {
+		return "", nil
+	}
+	if resp.StatusCode >= 400 {
+		return "", errors.New(resp.Status)
+	}
+	data, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", err
+	}
+
+	// {"peerId":"12D3KooWFWXbQG9x44JVauFnG7zqzfuR4eDo9iGbXUm9rTLvW7kv","miners":["f0811822"],"multiAddresses":["/ip4/3.140.191.240/tcp/7523"]}
+	var spinfo struct {
+		Miners []string `json:"miners"`
+	}
+	if err = json.Unmarshal(data, &spinfo); err != nil {
+		return "", err
+	}
+
+	return strings.Join(spinfo.Miners, ", "), nil
 }
