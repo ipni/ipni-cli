@@ -20,9 +20,11 @@ var versionJSON []byte
 
 func init() {
 	// Read version from embedded JSON file.
-	var verMap map[string]string
-	json.Unmarshal(versionJSON, &verMap)
-	Release = verMap["version"]
+	var v struct {
+		Version string `json:"version"`
+	}
+	json.Unmarshal(versionJSON, &v)
+	Release = v.Version
 
 	// If running from a module, try to get the build info.
 	bi, ok := debug.ReadBuildInfo()
