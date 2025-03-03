@@ -121,7 +121,7 @@ var providerFlags = []cli.Flag{
 	},
 	&cli.BoolFlag{
 		Name:  "spid",
-		Usage: "Print the provider's Filecoin storage provider ID.",
+		Usage: "Print the provider's Filecoin storage provider ID. Optionally usable with --id-only.",
 	},
 	&cli.StringFlag{
 		Name:  "topic",
