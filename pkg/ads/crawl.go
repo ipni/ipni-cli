@@ -13,7 +13,7 @@ import (
 	"github.com/ipni/go-libipni/metadata"
 	"github.com/ipni/ipni-cli/pkg/adpub"
 	"github.com/libp2p/go-libp2p/core/peer"
-	"github.com/urfave/cli/v2"
+	"github.com/urfave/cli/v3"
 )
 
 var adsCrawlSubCmd = &cli.Command{
@@ -65,8 +65,8 @@ var adsCrawlFlags = []cli.Flag{
 	topicFlag,
 }
 
-func adsCrawlAction(cctx *cli.Context) error {
-	addrInfo, err := peer.AddrInfoFromString(cctx.String("addr-info"))
+func adsCrawlAction(ctx context.Context, cmd *cli.Command) error {
+	addrInfo, err := peer.AddrInfoFromString(cmd.String("addr-info"))
 	if err != nil {
 		return fmt.Errorf("bad pub-addr-info: %w", err)
 	}
@@ -74,37 +74,37 @@ func adsCrawlAction(cctx *cli.Context) error {
 	provClient, err := adpub.NewClient(*addrInfo,
 		adpub.WithDeleteAfterRead(true),
 		adpub.WithEntriesDepthLimit(0),
-		adpub.WithTopicName(cctx.String("topic")),
-		adpub.WithHttpTimeout(cctx.Duration("timeout")))
+		adpub.WithTopicName(cmd.String("topic")),
+		adpub.WithHttpTimeout(cmd.Duration("timeout")))
 	if err != nil {
 		return err
 	}
 
 	var latestCid cid.Cid
-	if cctx.String("latest") != "" {
-		latestCid, err = cid.Decode(cctx.String("latest"))
+	if cmd.String("latest") != "" {
+		latestCid, err = cid.Decode(cmd.String("latest"))
 		if err != nil {
 			return fmt.Errorf("bad cid: %w", err)
 		}
 	}
 
-	quiet := cctx.Bool("quiet")
-	skipEntries := cctx.Bool("skip-entries")
-	showMetadata := cctx.Bool("show-metadata")
-	showExtProviders := cctx.Bool("show-ext-providers")
-	stopMhs := cctx.Int("stop-mhs")
+	quiet := cmd.Bool("quiet")
+	skipEntries := cmd.Bool("skip-entries")
+	showMetadata := cmd.Bool("show-metadata")
+	showExtProviders := cmd.Bool("show-ext-providers")
+	stopMhs := cmd.Int("stop-mhs")
 
 	if skipEntries && stopMhs != 0 {
 		return errors.New("cannot use flag --skip-entries with --stop-mhs")
 	}
 
-	ctx, cancel := context.WithCancel(cctx.Context)
+	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
 	ads := make(chan *adpub.Advertisement, 1)
 	errCh := make(chan error, 1)
 	go func() {
-		errCh <- provClient.Crawl(ctx, latestCid, cctx.Int("number"), ads)
+		errCh <- provClient.Crawl(ctx, latestCid, cmd.Int("number"), ads)
 		close(ads)
 	}()
 
@@ -187,7 +187,7 @@ func adsCrawlAction(cctx *cli.Context) error {
 			continue
 		}
 
-		err = provClient.SyncEntriesWithRetry(cctx.Context, ad.Entries.Root())
+		err = provClient.SyncEntriesWithRetry(ctx, ad.Entries.Root())
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Failed to sync entries for advertisement %s: %s\n", ad.ID, err)
 			continue

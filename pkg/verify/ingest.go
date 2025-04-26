@@ -1,6 +1,7 @@
 package verify
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"math/rand"
@@ -20,7 +21,7 @@ import (
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/multiformats/go-multicodec"
 	"github.com/multiformats/go-multihash"
-	"github.com/urfave/cli/v2"
+	"github.com/urfave/cli/v3"
 )
 
 var (
@@ -107,12 +108,12 @@ var verifyIngestFlags = []cli.Flag{
 		Required:    true,
 		Destination: &provId,
 	},
-	&cli.PathFlag{
+	&cli.StringFlag{
 		Name:    "from-car",
 		Usage:   "Path to the CAR file from which to extract the list of multihash for verification.",
 		Aliases: []string{"fc"},
 	},
-	&cli.PathFlag{
+	&cli.StringFlag{
 		Name:    "from-car-index",
 		Usage:   "Path to the CAR index file from which to extract the list of multihash for verification.",
 		Aliases: []string{"fci"},
@@ -194,18 +195,18 @@ var verifyIngestFlags = []cli.Flag{
 	},
 }
 
-func beforeVerifyIngest(cctx *cli.Context) error {
-	if len(cctx.StringSlice("indexer")) == 0 {
-		if cctx.Bool("no-priv") {
-			return cli.Exit("missing value for --indexer", 1)
+func beforeVerifyIngest(ctx context.Context, cmd *cli.Command) (context.Context, error) {
+	if len(cmd.StringSlice("indexer")) == 0 {
+		if cmd.Bool("no-priv") {
+			return ctx, cli.Exit("missing value for --indexer", 1)
 		}
-		if cctx.String("dhstore") == "" {
-			return cli.Exit("missing value for --dhstore and --indexer", 1)
+		if cmd.String("dhstore") == "" {
+			return ctx, cli.Exit("missing value for --dhstore and --indexer", 1)
 		}
 	}
 
 	if samplingProb <= 0 || samplingProb > 1 {
-		return cli.Exit("Sampling probability must be larger than 0.0 and smaller or equal to 1.0.", 1)
+		return ctx, cli.Exit("Sampling probability must be larger than 0.0 and smaller or equal to 1.0.", 1)
 	}
 
 	if samplingProb == 1 {
@@ -222,25 +223,25 @@ func beforeVerifyIngest(cctx *cli.Context) error {
 		}
 	}
 
-	return nil
+	return ctx, nil
 }
 
-func verifyIngestAction(cctx *cli.Context) error {
-	providerID := cctx.String("provider-id")
+func verifyIngestAction(ctx context.Context, cmd *cli.Command) error {
+	providerID := cmd.String("provider-id")
 	provID, err := peer.Decode(providerID)
 	if err != nil {
 		return err
 	}
 
-	carPath := cctx.String("from-car")
-	carIndexPath := cctx.String("from-car-index")
+	carPath := cmd.String("from-car")
+	carIndexPath := cmd.String("from-car-index")
 
 	// If car path specified, then ingest from car.
 	if carPath != "" {
 		if carIndexPath != "" {
 			return errVerifyIngestMultipleSources()
 		}
-		return verifyIngestFromCar(cctx, provID, carPath)
+		return verifyIngestFromCar(ctx, cmd, provID, carPath)
 	}
 
 	// If car index path specified, then ingest from car index.
@@ -248,29 +249,29 @@ func verifyIngestAction(cctx *cli.Context) error {
 		if carPath != "" {
 			return errVerifyIngestMultipleSources()
 		}
-		return verifyIngestFromCarIndex(cctx, provID, carIndexPath)
+		return verifyIngestFromCarIndex(ctx, cmd, provID, carIndexPath)
 	}
 
 	// If neither car nor car index path specified, then ingest from provider.
-	return verifyIngestFromProvider(cctx, provID)
+	return verifyIngestFromProvider(ctx, cmd, provID)
 }
 
-func verifyIngestFromProvider(cctx *cli.Context, provID peer.ID) error {
+func verifyIngestFromProvider(ctx context.Context, cmd *cli.Command, provID peer.ID) error {
 	startAt := "at head of chain from publisher"
 	adCid := cid.Undef
-	if cctx.String("ad-cid") != "" {
-		if cctx.Bool("last-seen") {
+	if cmd.String("ad-cid") != "" {
+		if cmd.Bool("last-seen") {
 			return cli.Exit("Cannot specify both ad-cid and ad-last-seen.", 1)
 		}
 		var err error
-		adCid, err = cid.Decode(cctx.String("ad-cid"))
+		adCid, err = cid.Decode(cmd.String("ad-cid"))
 		if err != nil {
 			return err
 		}
-		startAt = "specified: " + cctx.String("ad-cid")
+		startAt = "specified: " + cmd.String("ad-cid")
 	}
 
-	adDepthLimit := cctx.Int("ad-depth-limit")
+	adDepthLimit := cmd.Int("ad-depth-limit")
 	adDepthLimitStr := "∞"
 	if adDepthLimit != 0 {
 		if adDepthLimit < 0 {
@@ -283,10 +284,10 @@ func verifyIngestFromProvider(cctx *cli.Context, provID peer.ID) error {
 	var clearFind *client.Client
 	var provCache *pcache.ProviderCache
 	var err error
-	if cctx.Bool("no-priv") {
-		idxr := cctx.String("dhstore")
+	if cmd.Bool("no-priv") {
+		idxr := cmd.String("dhstore")
 		if idxr == "" {
-			idxr = cctx.StringSlice("indexer")[0]
+			idxr = cmd.StringSlice("indexer")[0]
 		}
 		clearFind, err = client.New(idxr)
 		if err != nil {
@@ -299,8 +300,8 @@ func verifyIngestFromProvider(cctx *cli.Context, provID peer.ID) error {
 		}
 	} else {
 		dhFind, err = client.NewDHashClient(
-			client.WithProvidersURL(cctx.StringSlice("indexer")...),
-			client.WithDHStoreURL(cctx.String("dhstore")),
+			client.WithProvidersURL(cmd.StringSlice("indexer")...),
+			client.WithDHStoreURL(cmd.String("dhstore")),
 			client.WithPcacheTTL(0),
 		)
 		if err != nil {
@@ -310,7 +311,7 @@ func verifyIngestFromProvider(cctx *cli.Context, provID peer.ID) error {
 	}
 
 	// Get publisher address, for specified provider, from indexer.
-	provInfo, err := provCache.Get(cctx.Context, provID)
+	provInfo, err := provCache.Get(ctx, provID)
 	if err != nil {
 		var ae *apierror.Error
 		if errors.As(err, &ae) && ae.Status() == http.StatusNotFound {
@@ -330,13 +331,13 @@ func verifyIngestFromProvider(cctx *cli.Context, provID peer.ID) error {
 		Addrs: provInfo.Publisher.Addrs,
 	}
 	fmt.Println("Publisher:", pubAddrInfo.String())
-	fmt.Printf("Ads/Entries depth: %s/%d\n", adDepthLimitStr, cctx.Int64("entries-depth-limit"))
-	fmt.Println("Topic:", cctx.String("topic"))
+	fmt.Printf("Ads/Entries depth: %s/%d\n", adDepthLimitStr, cmd.Int64("entries-depth-limit"))
+	fmt.Println("Topic:", cmd.String("topic"))
 	fmt.Println("Last ad seen by indexer:", provInfo.LastAdvertisement.String())
 
 	pubClient, err := adpub.NewClient(pubAddrInfo,
-		adpub.WithTopicName(cctx.String("topic")),
-		adpub.WithEntriesDepthLimit(cctx.Int64("entries-depth-limit")))
+		adpub.WithTopicName(cmd.String("topic")),
+		adpub.WithEntriesDepthLimit(cmd.Int64("entries-depth-limit")))
 	if err != nil {
 		return err
 	}
@@ -344,7 +345,7 @@ func verifyIngestFromProvider(cctx *cli.Context, provID peer.ID) error {
 	stats := adpub.NewAdStats(include)
 
 	// If ad-last-seen specified, then use last advertisement seen by indexer.
-	if cctx.Bool("ad-last-seen") {
+	if cmd.Bool("ad-last-seen") {
 		adCid = provInfo.LastAdvertisement
 		startAt = "last seen by indexer: " + adCid.String()
 	}
@@ -353,10 +354,10 @@ func verifyIngestFromProvider(cctx *cli.Context, provID peer.ID) error {
 	fmt.Println()
 	var aggResult verifyResult
 	for i := 1; i <= adDepthLimit; i++ {
-		if cctx.Context.Err() != nil {
-			return cctx.Context.Err()
+		if ctx.Err() != nil {
+			return ctx.Err()
 		}
-		ad, err := pubClient.GetAdvertisement(cctx.Context, adCid)
+		ad, err := pubClient.GetAdvertisement(ctx, adCid)
 		if err != nil {
 			if ad == nil {
 				return err
@@ -372,7 +373,7 @@ func verifyIngestFromProvider(cctx *cli.Context, provID peer.ID) error {
 		} else if !ad.HasEntries() {
 			fmt.Println("Has no entries; skipping verification.")
 		} else {
-			err = pubClient.SyncEntriesWithRetry(cctx.Context, ad.Entries.Root())
+			err = pubClient.SyncEntriesWithRetry(ctx, ad.Entries.Root())
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "⚠️ Failed to sync entries for advertisement %s: %s\n", ad.ID, err)
 			}
@@ -391,7 +392,7 @@ func verifyIngestFromProvider(cctx *cli.Context, provID peer.ID) error {
 				if len(ads.MhSample) == 0 {
 					fmt.Println("🔘 Skipped; sampling did not include any multihashes.")
 				} else {
-					result, err := verifyIngestFromMhs(cctx, clearFind, dhFind, provID, ads.MhSample)
+					result, err := verifyIngestFromMhs(ctx, cmd, clearFind, dhFind, provID, ads.MhSample)
 					if err != nil {
 						return err
 					}
@@ -419,7 +420,7 @@ func verifyIngestFromProvider(cctx *cli.Context, provID peer.ID) error {
 	return nil
 }
 
-func verifyIngestFromCar(cctx *cli.Context, provID peer.ID, carPath string) error {
+func verifyIngestFromCar(ctx context.Context, cmd *cli.Command, provID peer.ID, carPath string) error {
 	carPath = path.Clean(carPath)
 
 	idx, err := getOrGenerateCarIndex(carPath)
@@ -429,10 +430,10 @@ func verifyIngestFromCar(cctx *cli.Context, provID peer.ID, carPath string) erro
 
 	var dhFind *client.DHashClient
 	var clearFind *client.Client
-	if cctx.Bool("no-priv") {
-		idxr := cctx.String("dhstore")
+	if cmd.Bool("no-priv") {
+		idxr := cmd.String("dhstore")
 		if idxr == "" {
-			idxr = cctx.StringSlice("indexer")[0]
+			idxr = cmd.StringSlice("indexer")[0]
 		}
 		clearFind, err = client.New(idxr)
 		if err != nil {
@@ -440,8 +441,8 @@ func verifyIngestFromCar(cctx *cli.Context, provID peer.ID, carPath string) erro
 		}
 	} else {
 		dhFind, err = client.NewDHashClient(
-			client.WithProvidersURL(cctx.StringSlice("indexer")...),
-			client.WithDHStoreURL(cctx.String("dhstore")),
+			client.WithProvidersURL(cmd.StringSlice("indexer")...),
+			client.WithDHStoreURL(cmd.String("dhstore")),
 			client.WithPcacheTTL(0),
 		)
 		if err != nil {
@@ -449,7 +450,7 @@ func verifyIngestFromCar(cctx *cli.Context, provID peer.ID, carPath string) erro
 		}
 	}
 
-	result, err := verifyIngestFromCarIterableIndex(cctx, clearFind, dhFind, provID, idx)
+	result, err := verifyIngestFromCarIterableIndex(ctx, cmd, clearFind, dhFind, provID, idx)
 	if err != nil {
 		return err
 	}
@@ -495,7 +496,7 @@ func generateIterableIndex(cr *car.Reader) (index.IterableIndex, error) {
 	return idx, nil
 }
 
-func verifyIngestFromCarIndex(cctx *cli.Context, provID peer.ID, carIndexPath string) error {
+func verifyIngestFromCarIndex(ctx context.Context, cmd *cli.Command, provID peer.ID, carIndexPath string) error {
 	carIndexPath = path.Clean(carIndexPath)
 
 	idxFile, err := os.Open(carIndexPath)
@@ -514,10 +515,10 @@ func verifyIngestFromCarIndex(cctx *cli.Context, provID peer.ID, carIndexPath st
 
 	var dhFind *client.DHashClient
 	var clearFind *client.Client
-	if cctx.Bool("no-priv") {
-		idxr := cctx.String("dhstore")
+	if cmd.Bool("no-priv") {
+		idxr := cmd.String("dhstore")
 		if idxr == "" {
-			idxr = cctx.StringSlice("indexer")[0]
+			idxr = cmd.StringSlice("indexer")[0]
 		}
 		clearFind, err = client.New(idxr)
 		if err != nil {
@@ -525,8 +526,8 @@ func verifyIngestFromCarIndex(cctx *cli.Context, provID peer.ID, carIndexPath st
 		}
 	} else {
 		dhFind, err = client.NewDHashClient(
-			client.WithProvidersURL(cctx.StringSlice("indexer")...),
-			client.WithDHStoreURL(cctx.String("dhstore")),
+			client.WithProvidersURL(cmd.StringSlice("indexer")...),
+			client.WithDHStoreURL(cmd.String("dhstore")),
 			client.WithPcacheTTL(0),
 		)
 		if err != nil {
@@ -534,7 +535,7 @@ func verifyIngestFromCarIndex(cctx *cli.Context, provID peer.ID, carIndexPath st
 		}
 	}
 
-	result, err := verifyIngestFromCarIterableIndex(cctx, clearFind, dhFind, provID, iterIdx)
+	result, err := verifyIngestFromCarIterableIndex(ctx, cmd, clearFind, dhFind, provID, iterIdx)
 	if err != nil {
 		return err
 	}
@@ -551,7 +552,7 @@ func errVerifyIngestMultipleSources() error {
 	return cli.Exit("Multiple multihash sources are specified. Only a single source at a time is supported.", 1)
 }
 
-func verifyIngestFromCarIterableIndex(cctx *cli.Context, find *client.Client, dhFind *client.DHashClient, provID peer.ID, idx index.IterableIndex) (*verifyResult, error) {
+func verifyIngestFromCarIterableIndex(ctx context.Context, cmd *cli.Command, find *client.Client, dhFind *client.DHashClient, provID peer.ID, idx index.IterableIndex) (*verifyResult, error) {
 	var mhs []multihash.Multihash
 	if err := idx.ForEach(func(mh multihash.Multihash, _ uint64) error {
 		if include() {
@@ -561,7 +562,7 @@ func verifyIngestFromCarIterableIndex(cctx *cli.Context, find *client.Client, dh
 	}); err != nil {
 		return nil, err
 	}
-	return verifyIngestFromMhs(cctx, find, dhFind, provID, mhs)
+	return verifyIngestFromMhs(ctx, cmd, find, dhFind, provID, mhs)
 }
 
 type verifyResult struct {
@@ -627,11 +628,11 @@ func (r *verifyResult) print(samplingProb float64, rngSeed int64, printUnindexed
 	}
 }
 
-func verifyIngestFromMhs(cctx *cli.Context, find *client.Client, dhFind *client.DHashClient, wantProvID peer.ID, mhs []multihash.Multihash) (*verifyResult, error) {
-	chunkSize := cctx.Int("batch-size")
+func verifyIngestFromMhs(ctx context.Context, cmd *cli.Command, find *client.Client, dhFind *client.DHashClient, wantProvID peer.ID, mhs []multihash.Multihash) (*verifyResult, error) {
+	chunkSize := cmd.Int("batch-size")
 	aggResult := &verifyResult{}
 	for len(mhs) >= chunkSize {
-		result, err := verifyIngest(cctx, find, dhFind, wantProvID, mhs[:chunkSize])
+		result, err := verifyIngest(ctx, find, dhFind, wantProvID, mhs[:chunkSize])
 		if err != nil {
 			return nil, err
 		}
@@ -640,7 +641,7 @@ func verifyIngestFromMhs(cctx *cli.Context, find *client.Client, dhFind *client.
 		os.Stdout.WriteString(".")
 	}
 	if len(mhs) != 0 {
-		result, err := verifyIngest(cctx, find, dhFind, wantProvID, mhs)
+		result, err := verifyIngest(ctx, find, dhFind, wantProvID, mhs)
 		if err != nil {
 			return nil, err
 		}
@@ -649,7 +650,7 @@ func verifyIngestFromMhs(cctx *cli.Context, find *client.Client, dhFind *client.
 	return aggResult, nil
 }
 
-func verifyIngest(cctx *cli.Context, find *client.Client, dhFind *client.DHashClient, wantProvID peer.ID, mhs []multihash.Multihash) (*verifyResult, error) {
+func verifyIngest(ctx context.Context, find *client.Client, dhFind *client.DHashClient, wantProvID peer.ID, mhs []multihash.Multihash) (*verifyResult, error) {
 	result := &verifyResult{
 		TotalMhChecked: len(mhs),
 	}
@@ -657,10 +658,10 @@ func verifyIngest(cctx *cli.Context, find *client.Client, dhFind *client.DHashCl
 	var response *model.FindResponse
 	var err error
 	if dhFind != nil {
-		response, err = client.FindBatch(cctx.Context, dhFind, mhs)
+		response, err = client.FindBatch(ctx, dhFind, mhs)
 		fmt.Println("🔒 Reader privacy enabled")
 	} else {
-		response, err = client.FindBatch(cctx.Context, find, mhs)
+		response, err = client.FindBatch(ctx, find, mhs)
 	}
 	if err != nil {
 		result.FailedToVerify = len(mhs)

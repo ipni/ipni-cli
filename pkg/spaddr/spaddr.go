@@ -1,11 +1,12 @@
 package spaddr
 
 import (
+	"context"
 	"errors"
 	"fmt"
 
 	"github.com/ipni/ipni-cli/pkg/spaddr/spinfo"
-	"github.com/urfave/cli/v2"
+	"github.com/urfave/cli/v3"
 )
 
 var SPAddrCmd = &cli.Command{
@@ -31,13 +32,13 @@ var spAddrFlags = []cli.Flag{
 	},
 }
 
-func spAddrAction(cctx *cli.Context) error {
-	gateway := cctx.String("gateway")
+func spAddrAction(ctx context.Context, cmd *cli.Command) error {
+	gateway := cmd.String("gateway")
 	if gateway == "" {
 		return errors.New("lotus gateway not specified")
 	}
 
-	addrInfo, err := spinfo.SPAddrInfo(cctx.Context, gateway, cctx.String("spid"))
+	addrInfo, err := spinfo.SPAddrInfo(ctx, gateway, cmd.String("spid"))
 	if err != nil {
 		return err
 	}

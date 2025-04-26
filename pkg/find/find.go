@@ -1,6 +1,7 @@
 package find
 
 import (
+	"context"
 	"encoding/base64"
 	"fmt"
 	"strings"
@@ -11,7 +12,7 @@ import (
 	"github.com/ipni/go-libipni/metadata"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/multiformats/go-multihash"
-	"github.com/urfave/cli/v2"
+	"github.com/urfave/cli/v3"
 )
 
 var FindCmd = &cli.Command{
@@ -41,7 +42,7 @@ var findFlags = []cli.Flag{
 		Name:    "indexer",
 		Usage:   "URL of indexer to query. Multiple OK to specify providers info sources for dhstore.",
 		Aliases: []string{"i"},
-		Value:   cli.NewStringSlice("https://cid.contact"),
+		Value:   []string{"https://cid.contact"},
 	},
 	&cli.StringFlag{
 		Name:    "dhstore",
@@ -62,25 +63,25 @@ var findFlags = []cli.Flag{
 	},
 }
 
-func beforeFind(cctx *cli.Context) error {
-	if len(cctx.StringSlice("indexer")) == 0 {
-		if !cctx.Bool("priv") {
-			return cli.Exit("missing value for --indexer", 1)
+func beforeFind(ctx context.Context, cmd *cli.Command) (context.Context, error) {
+	if len(cmd.StringSlice("indexer")) == 0 {
+		if !cmd.Bool("priv") {
+			return ctx, cli.Exit("missing value for --indexer", 1)
 		}
-		if cctx.String("dhstore") == "" {
-			return cli.Exit("missing value for --dhstore and --indexer", 1)
+		if cmd.String("dhstore") == "" {
+			return ctx, cli.Exit("missing value for --dhstore and --indexer", 1)
 		}
 	}
-	if cctx.String("dhstore") != "" {
-		cctx.Set("priv", "true")
+	if cmd.String("dhstore") != "" {
+		cmd.Set("priv", "true")
 	}
 
-	return nil
+	return ctx, nil
 }
 
-func findAction(cctx *cli.Context) error {
-	mhArgs := cctx.StringSlice("mh")
-	cidArgs := cctx.StringSlice("cid")
+func findAction(ctx context.Context, cmd *cli.Command) error {
+	mhArgs := cmd.StringSlice("mh")
+	cidArgs := cmd.StringSlice("cid")
 	if len(mhArgs) == 0 && len(cidArgs) == 0 {
 		return fmt.Errorf("must specify at least one multihash or CID")
 	}
@@ -101,57 +102,57 @@ func findAction(cctx *cli.Context) error {
 		mhs = append(mhs, c.Hash())
 	}
 
-	if cctx.Bool("priv") {
-		return dhFind(cctx, mhs)
+	if cmd.Bool("priv") {
+		return dhFind(ctx, cmd, mhs)
 	}
-	return clearFind(cctx, mhs)
+	return clearFind(ctx, cmd, mhs)
 }
 
-func dhFind(cctx *cli.Context, mhs []multihash.Multihash) error {
+func dhFind(ctx context.Context, cmd *cli.Command, mhs []multihash.Multihash) error {
 	cl, err := client.NewDHashClient(
-		client.WithProvidersURL(cctx.StringSlice("indexer")...),
-		client.WithDHStoreURL(cctx.String("dhstore")),
+		client.WithProvidersURL(cmd.StringSlice("indexer")...),
+		client.WithDHStoreURL(cmd.String("dhstore")),
 		client.WithPcacheTTL(0),
 	)
 	if err != nil {
 		return err
 	}
 
-	resp, err := client.FindBatch(cctx.Context, cl, mhs)
+	resp, err := client.FindBatch(ctx, cl, mhs)
 	if err != nil {
 		return err
 	}
-	if resp == nil && cctx.Bool("fallback") {
-		return clearFind(cctx, mhs)
+	if resp == nil && cmd.Bool("fallback") {
+		return clearFind(ctx, cmd, mhs)
 	}
 	fmt.Println("🔒 Reader privacy enabled")
-	return printResults(cctx, resp)
+	return printResults(cmd, resp)
 }
 
-func clearFind(cctx *cli.Context, mhs []multihash.Multihash) error {
-	idxr := cctx.String("dhstore")
+func clearFind(ctx context.Context, cmd *cli.Command, mhs []multihash.Multihash) error {
+	idxr := cmd.String("dhstore")
 	if idxr == "" {
-		idxr = cctx.StringSlice("indexer")[0]
+		idxr = cmd.StringSlice("indexer")[0]
 	}
 	cl, err := client.New(idxr)
 	if err != nil {
 		return err
 	}
 
-	resp, err := client.FindBatch(cctx.Context, cl, mhs)
+	resp, err := client.FindBatch(ctx, cl, mhs)
 	if err != nil {
 		return err
 	}
-	return printResults(cctx, resp)
+	return printResults(cmd, resp)
 }
 
-func printResults(cctx *cli.Context, resp *model.FindResponse) error {
+func printResults(cmd *cli.Command, resp *model.FindResponse) error {
 	if resp == nil || len(resp.MultihashResults) == 0 {
 		fmt.Println("index not found")
 		return nil
 	}
 
-	if cctx.Bool("id-only") {
+	if cmd.Bool("id-only") {
 		seen := make(map[peer.ID]struct{})
 		for i := range resp.MultihashResults {
 			for _, pr := range resp.MultihashResults[i].ProviderResults {

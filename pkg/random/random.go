@@ -20,7 +20,7 @@ import (
 	"github.com/ipni/ipni-cli/pkg/adpub"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/mattn/go-isatty"
-	"github.com/urfave/cli/v2"
+	"github.com/urfave/cli/v3"
 )
 
 var RandomCmd = &cli.Command{
@@ -36,7 +36,7 @@ var randomFlags = []cli.Flag{
 		Name:    "indexer",
 		Usage:   "Indexer URL. Specifying multiple results in a unified view of providers across all.",
 		Aliases: []string{"i"},
-		Value:   cli.NewStringSlice("https://cid.contact"),
+		Value:   []string{"https://cid.contact"},
 	},
 	&cli.StringSliceFlag{
 		Name:  "pid",
@@ -67,17 +67,17 @@ var randomFlags = []cli.Flag{
 	},
 }
 
-func randomAction(cctx *cli.Context) error {
-	adCount := cctx.Int("number")
+func randomAction(ctx context.Context, cmd *cli.Command) error {
+	adCount := cmd.Int("number")
 	if adCount <= 0 {
 		return errors.New("number must be at least 1")
 	}
-	mhsCount := cctx.Int("multihashes")
+	mhsCount := cmd.Int("multihashes")
 	if mhsCount <= 0 {
 		return errors.New("multihashes must be at least 1")
 	}
 
-	peerIDs, err := readPeerIDs(cctx)
+	peerIDs, err := readPeerIDs(cmd)
 	if err != nil {
 		return err
 	}
@@ -85,17 +85,17 @@ func randomAction(cctx *cli.Context) error {
 	var pc *pcache.ProviderCache
 	if len(peerIDs) > 1 {
 		pc, err = pcache.New(pcache.WithRefreshInterval(0),
-			pcache.WithSourceURL(cctx.StringSlice("indexer")...))
+			pcache.WithSourceURL(cmd.StringSlice("indexer")...))
 	} else {
 		pc, err = pcache.New(pcache.WithPreload(false), pcache.WithRefreshInterval(0),
-			pcache.WithSourceURL(cctx.StringSlice("indexer")...))
+			pcache.WithSourceURL(cmd.StringSlice("indexer")...))
 	}
 	if err != nil {
 		return err
 	}
 
 	for peerID := range peerIDs {
-		prov, err := getProvider(cctx, pc, peerID)
+		prov, err := getProvider(ctx, pc, peerID)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error getting provider %s: %s\n", peerID, err)
 			continue
@@ -104,7 +104,7 @@ func randomAction(cctx *cli.Context) error {
 			fmt.Fprintf(os.Stderr, "Provider %s has no publisher\n", peerID)
 			continue
 		}
-		err = RandomMultihashes(cctx.Context, *prov.Publisher, cctx.String("topic"), adCount, mhsCount, cctx.Bool("quiet"))
+		err = RandomMultihashes(ctx, *prov.Publisher, cmd.String("topic"), adCount, mhsCount, cmd.Bool("quiet"))
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Cannot get random multihashes from provider %s: %s\n", peerID, err)
 			continue
@@ -114,8 +114,8 @@ func randomAction(cctx *cli.Context) error {
 	return nil
 }
 
-func getProvider(cctx *cli.Context, pc *pcache.ProviderCache, peerID peer.ID) (*model.ProviderInfo, error) {
-	prov, err := pc.Get(cctx.Context, peerID)
+func getProvider(ctx context.Context, pc *pcache.ProviderCache, peerID peer.ID) (*model.ProviderInfo, error) {
+	prov, err := pc.Get(ctx, peerID)
 	if err != nil {
 		var ae *apierror.Error
 		if errors.As(err, &ae) && ae.Status() == http.StatusNotFound {
@@ -287,8 +287,8 @@ func RandomMultihashes(ctx context.Context, addrInfo peer.AddrInfo, topic string
 	return errors.New("no multihashes")
 }
 
-func readPeerIDs(cctx *cli.Context) (map[peer.ID]struct{}, error) {
-	pids := cctx.StringSlice("pid")
+func readPeerIDs(cmd *cli.Command) (map[peer.ID]struct{}, error) {
+	pids := cmd.StringSlice("pid")
 	if len(pids) == 0 {
 		if isatty.IsTerminal(os.Stdin.Fd()) {
 			fmt.Fprintln(os.Stderr, "Reading provider IDs from stdin. Enter one per line, or Ctrl-D to finish.")

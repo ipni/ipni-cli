@@ -2,6 +2,7 @@ package ads
 
 import (
 	"bufio"
+	"context"
 	"encoding/base64"
 	"errors"
 	"fmt"
@@ -14,7 +15,7 @@ import (
 	"github.com/ipni/ipni-cli/pkg/adpub"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/mattn/go-isatty"
-	"github.com/urfave/cli/v2"
+	"github.com/urfave/cli/v3"
 )
 
 var adsGetSubCmd = &cli.Command{
@@ -68,14 +69,14 @@ var adsGetFlags = []cli.Flag{
 	topicFlag,
 }
 
-func adsGetAction(cctx *cli.Context) error {
-	addrInfo, err := peer.AddrInfoFromString(cctx.String("addr-info"))
+func adsGetAction(ctx context.Context, cmd *cli.Command) error {
+	addrInfo, err := peer.AddrInfoFromString(cmd.String("addr-info"))
 	if err != nil {
 		return fmt.Errorf("bad pub-addr-info: %w", err)
 	}
 
 	var adCids []cid.Cid
-	cidArgs := cctx.StringSlice("cid")
+	cidArgs := cmd.StringSlice("cid")
 	if len(cidArgs) != 0 {
 		seen := make(map[string]struct{}, len(cidArgs))
 		adCids = make([]cid.Cid, 0, len(cidArgs))
@@ -91,7 +92,7 @@ func adsGetAction(cctx *cli.Context) error {
 			adCids = append(adCids, cid)
 		}
 	}
-	if cctx.Bool("head") {
+	if cmd.Bool("head") {
 		// Fetch latest advertisement
 		adCids = append(adCids, cid.Undef)
 	}
@@ -125,9 +126,9 @@ func adsGetAction(cctx *cli.Context) error {
 	}
 
 	pubClient, err := adpub.NewClient(*addrInfo,
-		adpub.WithTopicName(cctx.String("topic")),
-		adpub.WithEntriesDepthLimit(cctx.Int64("entries-depth-limit")),
-		adpub.WithHttpTimeout(cctx.Duration("timeout")))
+		adpub.WithTopicName(cmd.String("topic")),
+		adpub.WithEntriesDepthLimit(cmd.Int64("entries-depth-limit")),
+		adpub.WithHttpTimeout(cmd.Duration("timeout")))
 	if err != nil {
 		return err
 	}
@@ -135,7 +136,7 @@ func adsGetAction(cctx *cli.Context) error {
 	for _, adCid := range adCids {
 		fmt.Println()
 
-		ad, err := pubClient.GetAdvertisement(cctx.Context, adCid)
+		ad, err := pubClient.GetAdvertisement(ctx, adCid)
 		if err != nil {
 			if ad == nil {
 				if errors.Is(err, adpub.ErrContentNotFound) {
@@ -223,12 +224,12 @@ func adsGetAction(cctx *cli.Context) error {
 			continue
 		}
 
-		if cctx.Bool("skip-entries") {
+		if cmd.Bool("skip-entries") {
 			continue
 		}
 
 		// Sync entries if not a removal advertisement and has entries.
-		err = pubClient.SyncEntriesWithRetry(cctx.Context, ad.Entries.Root())
+		err = pubClient.SyncEntriesWithRetry(ctx, ad.Entries.Root())
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "⚠️  Failed to sync entries for advertisement %s: %s\n", ad.ID, err)
 			continue
@@ -244,7 +245,7 @@ func adsGetAction(cctx *cli.Context) error {
 			entriesOutput = "⚠️  Note: More entries were available but not synced due to the configured entries recursion limit or error during traversal."
 		}
 
-		if cctx.Bool("print-entries") {
+		if cmd.Bool("print-entries") {
 			for _, mh := range entries {
 				fmt.Printf("  %s\n", mh.B58String())
 			}
