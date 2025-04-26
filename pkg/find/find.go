@@ -45,7 +45,7 @@ var findFlags = []cli.Flag{
 	},
 	&cli.StringFlag{
 		Name:    "dhstore",
-		Usage:   "URL of double-hashed (reader-private) store, if different from indexer",
+		Usage:   "URL of double-hashed (reader-private) store, if different from indexer - assumes --priv.",
 		Aliases: []string{"dhs"},
 	},
 	&cli.BoolFlag{
@@ -53,8 +53,8 @@ var findFlags = []cli.Flag{
 		Usage: "Only show provider's peer ID from each result",
 	},
 	&cli.BoolFlag{
-		Name:  "no-priv",
-		Usage: "Do no use reader-privacy for queries. If --dhstore also specified, use in place of --indexer",
+		Name:  "priv",
+		Usage: "Use reader-privacy for queries",
 	},
 	&cli.BoolFlag{
 		Name:  "fallback",
@@ -64,13 +64,17 @@ var findFlags = []cli.Flag{
 
 func beforeFind(cctx *cli.Context) error {
 	if len(cctx.StringSlice("indexer")) == 0 {
-		if cctx.Bool("no-priv") {
+		if !cctx.Bool("priv") {
 			return cli.Exit("missing value for --indexer", 1)
 		}
 		if cctx.String("dhstore") == "" {
 			return cli.Exit("missing value for --dhstore and --indexer", 1)
 		}
 	}
+	if cctx.String("dhstore") != "" {
+		cctx.Set("priv", "true")
+	}
+
 	return nil
 }
 
@@ -97,10 +101,10 @@ func findAction(cctx *cli.Context) error {
 		mhs = append(mhs, c.Hash())
 	}
 
-	if cctx.Bool("no-priv") {
-		return clearFind(cctx, mhs)
+	if cctx.Bool("priv") {
+		return dhFind(cctx, mhs)
 	}
-	return dhFind(cctx, mhs)
+	return clearFind(cctx, mhs)
 }
 
 func dhFind(cctx *cli.Context, mhs []multihash.Multihash) error {
