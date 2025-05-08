@@ -135,7 +135,8 @@ func (c *client) Crawl(ctx context.Context, latestCid cid.Cid, n int, ads chan<-
 		opts = opts[:origOptsLen]
 		opts = append(opts, dagsync.WithHeadAdCid(latestCid), dagsync.ScopedDepthLimit(int64(batch)))
 
-		latestCid, err := c.sub.SyncAdChain(ctx, c.publisher, opts...)
+		var err error
+		latestCid, err = c.sub.SyncAdChain(ctx, c.publisher, opts...)
 		if err != nil {
 			if errors.Is(err, context.Canceled) {
 				return nil
@@ -143,12 +144,15 @@ func (c *client) Crawl(ctx context.Context, latestCid cid.Cid, n int, ads chan<-
 			return err
 		}
 
-		err = c.store.crawl(ctx, latestCid, batch, ads)
+		latestCid, err = c.store.crawl(ctx, latestCid, batch, ads)
 		if err != nil {
 			if errors.Is(err, context.Canceled) {
 				return nil
 			}
 			return err
+		}
+		if latestCid == cid.Undef {
+			break
 		}
 	}
 	return nil

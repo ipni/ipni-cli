@@ -201,20 +201,21 @@ func adsCrawlAction(cctx *cli.Context) error {
 		if !wasRm {
 			activeMhs += len(entries)
 		}
+		totalMhs += len(entries)
 
 		if quiet {
 			if wasRm {
 				fmt.Println(ad.ID, "Multihashes:", len(entries), "(removed)")
 			} else {
-				fmt.Println(ad.ID, "Multihashes:", len(entries))
+				fmt.Println(ad.ID, "Multihashes:", len(entries), "\t\ttotal:", totalMhs)
 			}
 		} else {
 			fmt.Println("Entries:")
 			fmt.Println("  Chunk Count:", ad.Entries.ChunkCount())
 			fmt.Println("  Multihashes:", len(entries))
+			fmt.Println("Active mhs:", activeMhs, "Total mhs:", totalMhs)
 		}
 
-		totalMhs += len(entries)
 		if totalMhs >= stopMhs {
 			break
 		}

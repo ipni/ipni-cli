@@ -193,33 +193,33 @@ func (s *ClientStore) list(ctx context.Context, nextCid cid.Cid, n int, w io.Wri
 	return nil
 }
 
-func (s *ClientStore) crawl(ctx context.Context, nextCid cid.Cid, n int, ads chan<- *Advertisement) error {
+func (s *ClientStore) crawl(ctx context.Context, nextCid cid.Cid, n int, ads chan<- *Advertisement) (cid.Cid, error) {
 	for i := 0; i < n; i++ {
 		val, err := s.Batching.Get(ctx, datastore.NewKey(nextCid.String()))
 		if err != nil {
-			return err
+			return cid.Undef, err
 		}
 
 		nb := schema.AdvertisementPrototype.NewBuilder()
 		decoder, err := multicodec.LookupDecoder(nextCid.Prefix().Codec)
 		if err != nil {
-			return err
+			return cid.Undef, err
 		}
 
 		err = decoder(nb, bytes.NewBuffer(val))
 		if err != nil {
-			return err
+			return cid.Undef, err
 		}
 		node := nb.Build()
 
 		ad, err := schema.UnwrapAdvertisement(node)
 		if err != nil {
-			return err
+			return cid.Undef, err
 		}
 
 		dprovid, err := peer.Decode(ad.Provider)
 		if err != nil {
-			return err
+			return cid.Undef, err
 		}
 
 		a := &Advertisement{
@@ -248,14 +248,14 @@ func (s *ClientStore) crawl(ctx context.Context, nextCid cid.Cid, n int, ads cha
 		select {
 		case ads <- a:
 		case <-ctx.Done():
-			return nil
+			return cid.Undef, nil
 		}
 
 		if ad.PreviousID == nil {
-			return nil
+			return cid.Undef, nil
 		}
 
 		nextCid = ad.PreviousID.(cidlink.Link).Cid
 	}
-	return nil
+	return nextCid, nil
 }
