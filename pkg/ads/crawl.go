@@ -94,7 +94,7 @@ func adsCrawlAction(cctx *cli.Context) error {
 	stopMhs := cctx.Int("stop-mhs")
 
 	if skipEntries && stopMhs != 0 {
-		return errors.New("Cannot use flag --skip-entries with --stop-mhs")
+		return errors.New("cannot use flag --skip-entries with --stop-mhs")
 	}
 
 	ctx, cancel := context.WithCancel(cctx.Context)
