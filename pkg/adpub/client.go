@@ -24,6 +24,7 @@ type Client interface {
 	GetAdvertisement(context.Context, cid.Cid) (*Advertisement, error)
 	Close() error
 	List(context.Context, cid.Cid, int, io.Writer) error
+	Crawl(context.Context, cid.Cid, int, chan<- *Advertisement) error
 	SyncEntriesWithRetry(context.Context, cid.Cid) error
 }
 
@@ -103,6 +104,61 @@ func (c *client) List(ctx context.Context, latestCid cid.Cid, n int, w io.Writer
 	return c.store.list(ctx, latestCid, n, w)
 }
 
+func (c *client) Crawl(ctx context.Context, latestCid cid.Cid, n int, ads chan<- *Advertisement) error {
+	const batchSize = 10
+
+	var opts []dagsync.SyncOption
+	if n > syncSegmentSize {
+		prevAdCid := func(adCid cid.Cid) (cid.Cid, error) {
+			ad, err := c.store.loadAd(ctx, adCid)
+			if err != nil {
+				return cid.Undef, err
+			}
+			return ad.PreviousCid(), nil
+		}
+		opts = append(opts, dagsync.ScopedSegmentDepthLimit(syncSegmentSize))
+		opts = append(opts, dagsync.ScopedBlockHook(dagsync.MakeGeneralBlockHook(prevAdCid)))
+	}
+	origOptsLen := len(opts)
+
+	if n == 0 {
+		n = -1
+	}
+	batch := batchSize
+	for n != 0 {
+		if n != -1 {
+			if n < batchSize {
+				batch = n
+			}
+			n -= batch
+		}
+
+		opts = opts[:origOptsLen]
+		opts = append(opts, dagsync.WithHeadAdCid(latestCid), dagsync.ScopedDepthLimit(int64(batch)))
+
+		var err error
+		latestCid, err = c.sub.SyncAdChain(ctx, c.publisher, opts...)
+		if err != nil {
+			if errors.Is(err, context.Canceled) {
+				return nil
+			}
+			return err
+		}
+
+		latestCid, err = c.store.crawl(ctx, latestCid, batch, ads)
+		if err != nil {
+			if errors.Is(err, context.Canceled) {
+				return nil
+			}
+			return err
+		}
+		if latestCid == cid.Undef {
+			break
+		}
+	}
+	return nil
+}
+
 func (c *client) GetAdvertisement(ctx context.Context, adCid cid.Cid) (*Advertisement, error) {
 	// Sync the advertisement without entries first.
 	adCid, err := c.syncAdWithRetry(ctx, adCid, c.sub)
@@ -116,12 +172,8 @@ func (c *client) GetAdvertisement(ctx context.Context, adCid cid.Cid) (*Advertis
 		return nil, err
 	}
 
-	if ad.IsRemove {
-		return ad, nil
-	}
-
 	// Return the partially synced advertisement useful for output to client.
-	return ad, err
+	return ad, nil
 }
 
 func (c *client) syncAdWithRetry(ctx context.Context, adCid cid.Cid, sub *dagsync.Subscriber) (cid.Cid, error) {
