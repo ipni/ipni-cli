@@ -192,3 +192,70 @@ func (s *ClientStore) list(ctx context.Context, nextCid cid.Cid, n int, w io.Wri
 	}
 	return nil
 }
+
+func (s *ClientStore) crawl(ctx context.Context, nextCid cid.Cid, n int, ads chan<- *Advertisement) error {
+	for i := 0; i < n; i++ {
+		val, err := s.Batching.Get(ctx, datastore.NewKey(nextCid.String()))
+		if err != nil {
+			return err
+		}
+
+		nb := schema.AdvertisementPrototype.NewBuilder()
+		decoder, err := multicodec.LookupDecoder(nextCid.Prefix().Codec)
+		if err != nil {
+			return err
+		}
+
+		err = decoder(nb, bytes.NewBuffer(val))
+		if err != nil {
+			return err
+		}
+		node := nb.Build()
+
+		ad, err := schema.UnwrapAdvertisement(node)
+		if err != nil {
+			return err
+		}
+
+		dprovid, err := peer.Decode(ad.Provider)
+		if err != nil {
+			return err
+		}
+
+		a := &Advertisement{
+			ID:               nextCid,
+			ProviderID:       dprovid,
+			ContextID:        ad.ContextID,
+			Metadata:         ad.Metadata,
+			Addresses:        ad.Addresses,
+			PreviousID:       ad.PreviousCid(),
+			IsRemove:         ad.IsRm,
+			ExtendedProvider: ad.ExtendedProvider,
+		}
+
+		if ad.Entries != nil {
+			entriesCid := ad.Entries.(cidlink.Link).Cid
+			if entriesCid != cid.Undef {
+				a.Entries = &EntriesIterator{
+					root:  entriesCid,
+					next:  entriesCid,
+					ctx:   ctx,
+					store: s,
+				}
+			}
+		}
+
+		select {
+		case ads <- a:
+		case <-ctx.Done():
+			return nil
+		}
+
+		if ad.PreviousID == nil {
+			return nil
+		}
+
+		nextCid = ad.PreviousID.(cidlink.Link).Cid
+	}
+	return nil
+}

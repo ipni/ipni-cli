@@ -35,6 +35,7 @@ Here are a few examples that use the following commands:
 - `ads`       Show advertisements on a chain from a specified publisher
   - `get`         Show information about an advertisement from a specified publisher
   - `list`        List advertisements from latest to earlier from a specified publisher
+  - `crawl`       Crawl publisher's advertisements and show information for each advertisement
   - `dist`        Determine the distance between two advertisements in a chain
 - `find`      Find value by CID or multihash in indexer
 - `provider`  Show information about providers known to an indexer
@@ -67,6 +68,12 @@ cat ad-cids-list.txt | ipni add get /dns4/ads.example.com/tcp/24001/p2p/<publish
 - List the 10 most recent advertisements from a provider:
 ```sh
 ipni ads list -n 10 --ai=/ip4/38.70.220.112/tcp/10201/p2p/12D3KooWEAcRJ5fYjuavKgAhu79juR7mgaznSZxsm2RRUBiWurv9
+```
+
+### `ads crawl`
+- Crawl advertisements from a provider and stop after reading 1000 multihashes:
+```sh
+ipni ads crawl -stop-mhs 1000 --ai=/ip4/38.70.220.112/tcp/10201/p2p/12D3KooWEAcRJ5fYjuavKgAhu79juR7mgaznSZxsm2RRUBiWurv9
 ```
 
 ### `ads dist`

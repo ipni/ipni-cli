@@ -10,6 +10,7 @@ var AdsCmd = &cli.Command{
 	Subcommands: []*cli.Command{
 		adsGetSubCmd,
 		adsListSubCmd,
+		adsCrawlSubCmd,
 		adsDistSubCmd,
 	},
 }
