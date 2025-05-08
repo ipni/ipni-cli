@@ -216,7 +216,7 @@ func adsCrawlAction(cctx *cli.Context) error {
 			fmt.Println("Active mhs:", activeMhs, "Total mhs:", totalMhs)
 		}
 
-		if totalMhs >= stopMhs {
+		if stopMhs != 0 && totalMhs >= stopMhs {
 			break
 		}
 	}

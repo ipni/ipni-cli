@@ -132,6 +132,7 @@ func (c *client) Crawl(ctx context.Context, latestCid cid.Cid, n int, ads chan<-
 			}
 			n -= batch
 		}
+
 		opts = opts[:origOptsLen]
 		opts = append(opts, dagsync.WithHeadAdCid(latestCid), dagsync.ScopedDepthLimit(int64(batch)))
 
