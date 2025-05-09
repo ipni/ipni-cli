@@ -72,7 +72,7 @@ func NewClient(addrInfo peer.AddrInfo, options ...Option) (Client, error) {
 		ownsHost:  ownsHost,
 		topic:     opts.topic,
 
-		store: newClientStore(),
+		store: newClientStore(opts.delAfterRead),
 	}
 
 	c.sub, err = dagsync.NewSubscriber(c.host, c.store.Batching, c.store.LinkSystem, c.topic, dagsync.HttpTimeout(opts.httpTimeout))

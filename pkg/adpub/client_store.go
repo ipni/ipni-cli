@@ -48,7 +48,7 @@ func (a *Advertisement) HasEntries() bool {
 	return a.Entries != nil && a.Entries.IsPresent()
 }
 
-func newClientStore() *ClientStore {
+func newClientStore(delAfterRead bool) *ClientStore {
 	store := dssync.MutexWrap(datastore.NewMapDatastore())
 	lsys := cidlink.DefaultLinkSystem()
 	lsys.StorageReadOpener = func(lctx ipld.LinkContext, lnk ipld.Link) (io.Reader, error) {
@@ -67,8 +67,9 @@ func newClientStore() *ClientStore {
 		}, nil
 	}
 	return &ClientStore{
-		Batching:   store,
-		LinkSystem: lsys,
+		Batching:     store,
+		LinkSystem:   lsys,
+		delAfterRead: delAfterRead,
 	}
 }
 
