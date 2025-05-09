@@ -72,6 +72,7 @@ func adsCrawlAction(cctx *cli.Context) error {
 	}
 
 	provClient, err := adpub.NewClient(*addrInfo,
+		adpub.WithDeleteAfterRead(true),
 		adpub.WithEntriesDepthLimit(0),
 		adpub.WithTopicName(cctx.String("topic")),
 		adpub.WithHttpTimeout(cctx.Duration("timeout")))
