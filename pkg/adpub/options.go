@@ -20,6 +20,7 @@ type config struct {
 	p2pHost           host.Host
 	syncRetryBackoff  time.Duration
 	topic             string
+	delAfterRead      bool
 }
 
 // Option is a function that sets a value in a config.
@@ -95,6 +96,14 @@ func WithHttpTimeout(to time.Duration) Option {
 		if to != 0 {
 			c.httpTimeout = to
 		}
+		return nil
+	}
+}
+
+// WithDeleteAfterRead deleted ifems from the store after reading them.
+func WithDeleteAfterRead(del bool) Option {
+	return func(c *config) error {
+		c.delAfterRead = del
 		return nil
 	}
 }

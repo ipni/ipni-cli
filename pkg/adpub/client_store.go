@@ -11,7 +11,6 @@ import (
 	"github.com/ipld/go-ipld-prime"
 	"github.com/ipld/go-ipld-prime/linking"
 	cidlink "github.com/ipld/go-ipld-prime/linking/cid"
-	"github.com/ipld/go-ipld-prime/multicodec"
 	"github.com/ipni/go-libipni/ingest/schema"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/multiformats/go-multihash"
@@ -24,6 +23,8 @@ import (
 type ClientStore struct {
 	datastore.Batching
 	ipld.LinkSystem
+
+	delAfterRead bool
 }
 
 // Advertisement contains information about a schema.Advertisement
@@ -92,6 +93,9 @@ func (s *ClientStore) getEntriesChunk(ctx context.Context, target cid.Cid) (cid.
 	if err != nil {
 		return cid.Undef, nil, err
 	}
+	if s.delAfterRead {
+		s.Batching.Delete(ctx, datastore.NewKey(target.String()))
+	}
 
 	chunk, err := schema.UnwrapEntryChunk(n)
 	if err != nil {
@@ -108,9 +112,13 @@ func (s *ClientStore) getEntriesChunk(ctx context.Context, target cid.Cid) (cid.
 }
 
 func (s *ClientStore) loadAd(ctx context.Context, id cid.Cid) (schema.Advertisement, error) {
-	val, err := s.Batching.Get(ctx, datastore.NewKey(id.String()))
+	dsKey := datastore.NewKey(id.String())
+	val, err := s.Batching.Get(ctx, dsKey)
 	if err != nil {
 		return schema.Advertisement{}, err
+	}
+	if s.delAfterRead {
+		s.Batching.Delete(ctx, dsKey)
 	}
 	return schema.BytesToAdvertisement(id, val)
 }
@@ -156,28 +164,10 @@ func (s *ClientStore) getAdvertisement(ctx context.Context, id cid.Cid) (*Advert
 
 func (s *ClientStore) list(ctx context.Context, nextCid cid.Cid, n int, w io.Writer) error {
 	for i := 0; i < n; i++ {
-		val, err := s.Batching.Get(ctx, datastore.NewKey(nextCid.String()))
+		ad, err := s.loadAd(ctx, nextCid)
 		if err != nil {
 			return err
 		}
-
-		nb := schema.AdvertisementPrototype.NewBuilder()
-		decoder, err := multicodec.LookupDecoder(nextCid.Prefix().Codec)
-		if err != nil {
-			return err
-		}
-
-		err = decoder(nb, bytes.NewBuffer(val))
-		if err != nil {
-			return err
-		}
-		node := nb.Build()
-
-		ad, err := schema.UnwrapAdvertisement(node)
-		if err != nil {
-			return err
-		}
-
 		if _, err = io.WriteString(w, nextCid.String()); err != nil {
 			return err
 		}
@@ -195,24 +185,7 @@ func (s *ClientStore) list(ctx context.Context, nextCid cid.Cid, n int, w io.Wri
 
 func (s *ClientStore) crawl(ctx context.Context, nextCid cid.Cid, n int, ads chan<- *Advertisement) (cid.Cid, error) {
 	for i := 0; i < n; i++ {
-		val, err := s.Batching.Get(ctx, datastore.NewKey(nextCid.String()))
-		if err != nil {
-			return cid.Undef, err
-		}
-
-		nb := schema.AdvertisementPrototype.NewBuilder()
-		decoder, err := multicodec.LookupDecoder(nextCid.Prefix().Codec)
-		if err != nil {
-			return cid.Undef, err
-		}
-
-		err = decoder(nb, bytes.NewBuffer(val))
-		if err != nil {
-			return cid.Undef, err
-		}
-		node := nb.Build()
-
-		ad, err := schema.UnwrapAdvertisement(node)
+		ad, err := s.loadAd(ctx, nextCid)
 		if err != nil {
 			return cid.Undef, err
 		}

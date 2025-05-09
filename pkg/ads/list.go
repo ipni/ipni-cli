@@ -44,7 +44,9 @@ func adsListAction(cctx *cli.Context) error {
 		return fmt.Errorf("bad pub-addr-info: %w", err)
 	}
 
-	provClient, err := adpub.NewClient(*addrInfo, adpub.WithTopicName(cctx.String("topic")),
+	provClient, err := adpub.NewClient(*addrInfo,
+		adpub.WithDeleteAfterRead(true),
+		adpub.WithTopicName(cctx.String("topic")),
 		adpub.WithHttpTimeout(cctx.Duration("timeout")))
 	if err != nil {
 		return err
