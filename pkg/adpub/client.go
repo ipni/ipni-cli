@@ -18,7 +18,10 @@ import (
 	"github.com/libp2p/go-libp2p/core/peer"
 )
 
-const syncSegmentSize = 2048
+const (
+	crawlBatchSize  = 16
+	syncSegmentSize = 2048
+)
 
 type Client interface {
 	GetAdvertisement(context.Context, cid.Cid) (*Advertisement, error)
@@ -105,8 +108,6 @@ func (c *client) List(ctx context.Context, latestCid cid.Cid, n int, w io.Writer
 }
 
 func (c *client) Crawl(ctx context.Context, latestCid cid.Cid, n int, ads chan<- *Advertisement) error {
-	const batchSize = 10
-
 	var opts []dagsync.SyncOption
 	if n > syncSegmentSize {
 		prevAdCid := func(adCid cid.Cid) (cid.Cid, error) {
@@ -124,10 +125,10 @@ func (c *client) Crawl(ctx context.Context, latestCid cid.Cid, n int, ads chan<-
 	if n == 0 {
 		n = -1
 	}
-	batch := batchSize
+	batch := crawlBatchSize
 	for n != 0 {
 		if n != -1 {
-			if n < batchSize {
+			if n < crawlBatchSize {
 				batch = n
 			}
 			n -= batch
