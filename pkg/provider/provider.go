@@ -25,7 +25,7 @@ import (
 	"github.com/libp2p/go-libp2p/core/peer"
 	libp2phttp "github.com/libp2p/go-libp2p/p2p/http"
 	"github.com/mattn/go-isatty"
-	"github.com/urfave/cli/v2"
+	"github.com/urfave/cli/v3"
 )
 
 const filfoxPeerAPI = "https://filfox.info/api/v1/peer"
@@ -50,7 +50,7 @@ var providerFlags = []cli.Flag{
 		Name:    "indexer",
 		Usage:   "Indexer URL. Specifying multiple results in a unified view of providers across all.",
 		Aliases: []string{"i"},
-		Value:   cli.NewStringSlice("https://cid.contact"),
+		Value:   []string{"https://cid.contact"},
 	},
 	&cli.StringSliceFlag{
 		Name:  "pid",
@@ -130,16 +130,16 @@ var providerFlags = []cli.Flag{
 	},
 }
 
-func providerAction(cctx *cli.Context) error {
-	if cctx.Bool("count") {
-		return countProviders(cctx)
+func providerAction(ctx context.Context, cmd *cli.Command) error {
+	if cmd.Bool("count") {
+		return countProviders(cmd)
 	}
 
-	if cctx.Bool("all") {
-		return listProviders(cctx, nil)
+	if cmd.Bool("all") {
+		return listProviders(ctx, cmd, nil)
 	}
 
-	pids := cctx.StringSlice("pid")
+	pids := cmd.StringSlice("pid")
 	if len(pids) == 0 {
 		if isatty.IsTerminal(os.Stdin.Fd()) {
 			fmt.Fprintln(os.Stderr, "Reading provider IDs from stdin. Enter one per line, or Ctrl-D to finish.")
@@ -168,30 +168,30 @@ func providerAction(cctx *cli.Context) error {
 		peerIDs[peerID] = struct{}{}
 	}
 
-	if cctx.Bool("invert") {
-		return listProviders(cctx, peerIDs)
+	if cmd.Bool("invert") {
+		return listProviders(ctx, cmd, peerIDs)
 	}
 
 	var pc *pcache.ProviderCache
 	var err error
 	if len(peerIDs) > 1 {
 		pc, err = pcache.New(pcache.WithRefreshInterval(0),
-			pcache.WithSourceURL(cctx.StringSlice("indexer")...))
+			pcache.WithSourceURL(cmd.StringSlice("indexer")...))
 	} else {
 		pc, err = pcache.New(pcache.WithPreload(false), pcache.WithRefreshInterval(0),
-			pcache.WithSourceURL(cctx.StringSlice("indexer")...))
+			pcache.WithSourceURL(cmd.StringSlice("indexer")...))
 	}
 	if err != nil {
 		return err
 	}
 
-	if cctx.Bool("follow-dist") {
-		return followDistance(cctx, peerIDs, nil, pc)
+	if cmd.Bool("follow-dist") {
+		return followDistance(ctx, cmd, peerIDs, nil, pc)
 	}
 
 	var errCount int
 	for peerID := range peerIDs {
-		err = getProvider(cctx, pc, peerID)
+		err = getProvider(ctx, cmd, pc, peerID)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error getting provider %s: %s\n", peerID, err)
 			errCount++
@@ -205,8 +205,8 @@ func providerAction(cctx *cli.Context) error {
 	return nil
 }
 
-func getProvider(cctx *cli.Context, pc *pcache.ProviderCache, peerID peer.ID) error {
-	prov, err := pc.Get(cctx.Context, peerID)
+func getProvider(ctx context.Context, cmd *cli.Command, pc *pcache.ProviderCache, peerID peer.ID) error {
+	prov, err := pc.Get(ctx, peerID)
 	if err != nil {
 		return err
 	}
@@ -214,25 +214,25 @@ func getProvider(cctx *cli.Context, pc *pcache.ProviderCache, peerID peer.ID) er
 		return errors.New("provider not found on indexer")
 	}
 
-	if cctx.Bool("diff-pub") && prov.AddrInfo.ID == prov.Publisher.ID {
+	if cmd.Bool("diff-pub") && prov.AddrInfo.ID == prov.Publisher.ID {
 		return nil
 	}
 
-	showProviderInfo(cctx, prov)
+	showProviderInfo(ctx, cmd, prov)
 	return nil
 }
 
-func countProviders(cctx *cli.Context) error {
+func countProviders(cmd *cli.Command) error {
 	pcache, err := pcache.New(pcache.WithRefreshInterval(0),
-		pcache.WithSourceURL(cctx.StringSlice("indexer")...))
+		pcache.WithSourceURL(cmd.StringSlice("indexer")...))
 	if err != nil {
 		return err
 	}
 	provs := pcache.List()
 
-	if cctx.Bool("error") {
+	if cmd.Bool("error") {
 		var count int
-		if cctx.Bool("invert") {
+		if cmd.Bool("invert") {
 			for _, pinfo := range provs {
 				if pinfo.LastError == "" {
 					count++
@@ -253,14 +253,14 @@ func countProviders(cctx *cli.Context) error {
 	return nil
 }
 
-func listProviders(cctx *cli.Context, exclude map[peer.ID]struct{}) error {
-	pc, err := pcache.New(pcache.WithSourceURL(cctx.StringSlice("indexer")...), pcache.WithRefreshInterval(0))
+func listProviders(ctx context.Context, cmd *cli.Command, exclude map[peer.ID]struct{}) error {
+	pc, err := pcache.New(pcache.WithSourceURL(cmd.StringSlice("indexer")...), pcache.WithRefreshInterval(0))
 	if err != nil {
 		return err
 	}
 
-	if cctx.Bool("follow-dist") {
-		return followDistance(cctx, nil, exclude, pc)
+	if cmd.Bool("follow-dist") {
+		return followDistance(ctx, cmd, nil, exclude, pc)
 	}
 
 	provs := pc.List()
@@ -270,12 +270,12 @@ func listProviders(cctx *cli.Context, exclude map[peer.ID]struct{}) error {
 	}
 
 	var errFilter, onlyWithError bool
-	if cctx.Bool("error") {
+	if cmd.Bool("error") {
 		errFilter = true
-		onlyWithError = !cctx.Bool("invert")
+		onlyWithError = !cmd.Bool("invert")
 	}
 
-	diffPub := cctx.Bool("diff-pub")
+	diffPub := cmd.Bool("diff-pub")
 
 	for _, pinfo := range provs {
 		if _, ok := exclude[pinfo.AddrInfo.ID]; ok {
@@ -287,20 +287,20 @@ func listProviders(cctx *cli.Context, exclude map[peer.ID]struct{}) error {
 		if diffPub && pinfo.AddrInfo.ID == pinfo.Publisher.ID {
 			continue
 		}
-		showProviderInfo(cctx, pinfo)
+		showProviderInfo(ctx, cmd, pinfo)
 	}
 
 	return nil
 }
 
-func followDistance(cctx *cli.Context, include, exclude map[peer.ID]struct{}, pc *pcache.ProviderCache) error {
-	trackUpdateIn, err := time.ParseDuration(cctx.String("update-interval"))
+func followDistance(ctx context.Context, cmd *cli.Command, include, exclude map[peer.ID]struct{}, pc *pcache.ProviderCache) error {
+	trackUpdateIn, err := time.ParseDuration(cmd.String("update-interval"))
 	if err != nil {
 		return err
 	}
 
 	var timeout time.Duration
-	updateTimeout := cctx.String("update-timeout")
+	updateTimeout := cmd.String("update-timeout")
 	if updateTimeout != "" {
 		timeout, err = time.ParseDuration(updateTimeout)
 		if err != nil {
@@ -309,9 +309,9 @@ func followDistance(cctx *cli.Context, include, exclude map[peer.ID]struct{}, pc
 	}
 
 	fmt.Fprintln(os.Stderr, "Showing provider distance updates, ctrl-c to cancel...")
-	limit := cctx.Int64("ad-depth-limit")
-	updates, err := dtrack.RunDistanceTracker(cctx.Context, include, exclude, pc, trackUpdateIn, timeout,
-		dtrack.WithDepthLimit(limit), dtrack.WithTopic(cctx.String("topic")))
+	limit := cmd.Int64("ad-depth-limit")
+	updates, err := dtrack.RunDistanceTracker(ctx, include, exclude, pc, trackUpdateIn, timeout,
+		dtrack.WithDepthLimit(limit), dtrack.WithTopic(cmd.String("topic")))
 	if err != nil {
 		return err
 	}
@@ -331,11 +331,11 @@ func followDistance(cctx *cli.Context, include, exclude map[peer.ID]struct{}, pc
 	return nil
 }
 
-func showProviderInfo(cctx *cli.Context, pinfo *model.ProviderInfo) {
-	if cctx.Bool("id-only") {
-		if cctx.Bool("spid") {
+func showProviderInfo(ctx context.Context, cmd *cli.Command, pinfo *model.ProviderInfo) {
+	if cmd.Bool("id-only") {
+		if cmd.Bool("spid") {
 			fmt.Print()
-			miners, err := getSPID(cctx.Context, pinfo.AddrInfo.ID)
+			miners, err := getSPID(ctx, pinfo.AddrInfo.ID)
 			if err != nil {
 				miners = err.Error()
 			}
@@ -346,7 +346,7 @@ func showProviderInfo(cctx *cli.Context, pinfo *model.ProviderInfo) {
 
 		return
 	}
-	if cctx.Bool("publisher") {
+	if cmd.Bool("publisher") {
 		if pinfo.Publisher != nil && len(pinfo.Publisher.Addrs) != 0 {
 			fmt.Printf("%s/p2p/%s\n", pinfo.Publisher.Addrs[0], pinfo.Publisher.ID)
 		}
@@ -371,7 +371,7 @@ func showProviderInfo(cctx *cli.Context, pinfo *model.ProviderInfo) {
 	if pinfo.Publisher != nil {
 		fmt.Println("    Publisher:", pinfo.Publisher.ID)
 		fmt.Println("        Publisher Addrs:", pinfo.Publisher.Addrs)
-		if cctx.Bool("protocol") {
+		if cmd.Bool("protocol") {
 			var proto string
 			var err error
 			p2pHost, err = libp2p.New()
@@ -379,7 +379,7 @@ func showProviderInfo(cctx *cli.Context, pinfo *model.ProviderInfo) {
 				proto = fmt.Sprintf("Error: %s", err)
 			} else {
 				defer p2pHost.Close()
-				proto, err = getProtocol(cctx.Context, *pinfo.Publisher, p2pHost)
+				proto, err = getProtocol(ctx, *pinfo.Publisher, p2pHost)
 				if err != nil {
 					proto = fmt.Sprintf("Error: %s", err)
 				}
@@ -406,20 +406,20 @@ func showProviderInfo(cctx *cli.Context, pinfo *model.ProviderInfo) {
 		fmt.Println("    LastErrorTime:", pinfo.LastErrorTime)
 	}
 
-	if cctx.Bool("distance") {
+	if cmd.Bool("distance") {
 		fmt.Print("    Distance to head advertisement: ")
-		dist, _, err := getLastSeenDistance(cctx, pinfo, p2pHost)
+		dist, _, err := getLastSeenDistance(ctx, cmd, pinfo, p2pHost)
 		if err != nil {
 			fmt.Println("error:", err)
 		} else if dist == -1 {
-			fmt.Printf("exceeded limit %d+", cctx.Int64("ad-depth-limit"))
+			fmt.Printf("exceeded limit %d+", cmd.Int64("ad-depth-limit"))
 		} else {
 			fmt.Println(dist)
 		}
 	}
 
-	if cctx.Bool("spid") {
-		miners, err := getSPID(cctx.Context, pinfo.AddrInfo.ID)
+	if cmd.Bool("spid") {
+		miners, err := getSPID(ctx, pinfo.AddrInfo.ID)
 		if err != nil {
 			miners = fmt.Sprint("error:", err)
 		}
@@ -475,7 +475,7 @@ func getProtocol(ctx context.Context, peerInfo peer.AddrInfo, p2pHost host.Host)
 	return "libp2phttp", nil
 }
 
-func getLastSeenDistance(cctx *cli.Context, pinfo *model.ProviderInfo, p2pHost host.Host) (int, cid.Cid, error) {
+func getLastSeenDistance(ctx context.Context, cmd *cli.Command, pinfo *model.ProviderInfo, p2pHost host.Host) (int, cid.Cid, error) {
 	if pinfo.Publisher == nil {
 		return 0, cid.Undef, errors.New("no publisher listed")
 	}
@@ -483,15 +483,15 @@ func getLastSeenDistance(cctx *cli.Context, pinfo *model.ProviderInfo, p2pHost h
 		return 0, cid.Undef, errors.New("no last advertisement")
 	}
 	adDist, err := dtrack.NewAdDistance(
-		dtrack.WithDepthLimit(cctx.Int64("ad-depth-limit")),
-		dtrack.WithTopic(cctx.String("topic")),
+		dtrack.WithDepthLimit(cmd.Int64("ad-depth-limit")),
+		dtrack.WithTopic(cmd.String("topic")),
 		dtrack.WithP2pHost(p2pHost))
 	if err != nil {
 		return 0, cid.Undef, err
 	}
 	defer adDist.Close()
 
-	return adDist.Get(cctx.Context, *pinfo.Publisher, pinfo.LastAdvertisement, cid.Undef)
+	return adDist.Get(ctx, *pinfo.Publisher, pinfo.LastAdvertisement, cid.Undef)
 }
 
 func getSPID(ctx context.Context, peerID peer.ID) (string, error) {

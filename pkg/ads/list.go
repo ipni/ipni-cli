@@ -1,13 +1,14 @@
 package ads
 
 import (
+	"context"
 	"fmt"
 	"os"
 
 	"github.com/ipfs/go-cid"
 	"github.com/ipni/ipni-cli/pkg/adpub"
 	"github.com/libp2p/go-libp2p/core/peer"
-	"github.com/urfave/cli/v2"
+	"github.com/urfave/cli/v3"
 )
 
 var adsListSubCmd = &cli.Command{
@@ -38,27 +39,27 @@ var adsListFlags = []cli.Flag{
 	topicFlag,
 }
 
-func adsListAction(cctx *cli.Context) error {
-	addrInfo, err := peer.AddrInfoFromString(cctx.String("addr-info"))
+func adsListAction(ctx context.Context, cmd *cli.Command) error {
+	addrInfo, err := peer.AddrInfoFromString(cmd.String("addr-info"))
 	if err != nil {
 		return fmt.Errorf("bad pub-addr-info: %w", err)
 	}
 
 	provClient, err := adpub.NewClient(*addrInfo,
 		adpub.WithDeleteAfterRead(true),
-		adpub.WithTopicName(cctx.String("topic")),
-		adpub.WithHttpTimeout(cctx.Duration("timeout")))
+		adpub.WithTopicName(cmd.String("topic")),
+		adpub.WithHttpTimeout(cmd.Duration("timeout")))
 	if err != nil {
 		return err
 	}
 
 	var latestCid cid.Cid
-	if cctx.String("latest") != "" {
-		latestCid, err = cid.Decode(cctx.String("latest"))
+	if cmd.String("latest") != "" {
+		latestCid, err = cid.Decode(cmd.String("latest"))
 		if err != nil {
 			return fmt.Errorf("bad cid: %w", err)
 		}
 	}
 
-	return provClient.List(cctx.Context, latestCid, cctx.Int("number"), os.Stdout)
+	return provClient.List(ctx, latestCid, cmd.Int("number"), os.Stdout)
 }

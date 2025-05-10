@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -15,7 +16,7 @@ import (
 	"github.com/ipni/ipni-cli/pkg/random"
 	"github.com/ipni/ipni-cli/pkg/spaddr"
 	"github.com/ipni/ipni-cli/pkg/verify"
-	"github.com/urfave/cli/v2"
+	"github.com/urfave/cli/v3"
 	"golang.org/x/mod/semver"
 )
 
@@ -23,7 +24,7 @@ func main() {
 	// Disable logging that happens in packages such as data-transfer.
 	_ = logging.SetLogLevel("*", "fatal")
 
-	app := &cli.App{
+	cmd := &cli.Command{
 		Name:    "ipni",
 		Usage:   "Commands to interact with IPNI indexers and index providers",
 		Version: ipnicli.Version,
@@ -38,7 +39,7 @@ func main() {
 		},
 	}
 
-	if err := app.Run(os.Args); err != nil {
+	if err := cmd.Run(context.Background(), os.Args); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
@@ -50,9 +51,9 @@ var versionCmd = &cli.Command{
 	Action: versionAction,
 }
 
-func versionAction(cctx *cli.Context) error {
+func versionAction(ctx context.Context, cmd *cli.Command) error {
 	const githubURL = "https://api.github.com/repos/ipni/ipni-cli/releases/latest"
-	fmt.Println(cctx.App.Version)
+	fmt.Println(cmd.Version)
 	resp, err := http.Get(githubURL)
 	if err != nil {
 		return fmt.Errorf("cannot check for newer version: %s", err)
@@ -72,11 +73,11 @@ func versionAction(cctx *cli.Context) error {
 	}
 	switch semver.Compare(ipnicli.Release, relName) {
 	case 0:
-		fmt.Fprintln(os.Stderr, cctx.App.Name, "is up to date")
+		fmt.Fprintln(os.Stderr, cmd.Name, "is up to date")
 	case -1:
-		fmt.Fprintln(os.Stderr, "a newer version of", cctx.App.Name, "is available:", relName)
+		fmt.Fprintln(os.Stderr, "a newer version of", cmd.Name, "is available:", relName)
 	case 1:
-		fmt.Fprintln(os.Stderr, "this is the newest version of", cctx.App.Name)
+		fmt.Fprintln(os.Stderr, "this is the newest version of", cmd.Name)
 	}
 	return nil
 }

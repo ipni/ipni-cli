@@ -1,12 +1,13 @@
 package ads
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/ipfs/go-cid"
 	"github.com/ipni/ipni-cli/pkg/dtrack"
 	"github.com/libp2p/go-libp2p/core/peer"
-	"github.com/urfave/cli/v2"
+	"github.com/urfave/cli/v3"
 )
 
 var adsDistSubCmd = &cli.Command{
@@ -42,28 +43,28 @@ var adsDistFlags = []cli.Flag{
 	topicFlag,
 }
 
-func adsDistAction(cctx *cli.Context) error {
-	addrInfo, err := peer.AddrInfoFromString(cctx.String("addr-info"))
+func adsDistAction(ctx context.Context, cmd *cli.Command) error {
+	addrInfo, err := peer.AddrInfoFromString(cmd.String("addr-info"))
 	if err != nil {
 		return fmt.Errorf("bad pub-addr-info: %w", err)
 	}
 
-	startCid, err := cid.Decode(cctx.String("start"))
+	startCid, err := cid.Decode(cmd.String("start"))
 	if err != nil {
 		return fmt.Errorf("bad start cid: %w", err)
 	}
 
 	adDist, err := dtrack.NewAdDistance(
-		dtrack.WithTopic(cctx.String("topic")),
-		dtrack.WithDepthLimit(cctx.Int64("dist-limit")))
+		dtrack.WithTopic(cmd.String("topic")),
+		dtrack.WithDepthLimit(cmd.Int64("dist-limit")))
 	if err != nil {
 		return err
 	}
 
 	var endStr string
 	var endCid cid.Cid
-	if cctx.String("end") != "" {
-		endCid, err = cid.Decode(cctx.String("end"))
+	if cmd.String("end") != "" {
+		endCid, err = cid.Decode(cmd.String("end"))
 		if err != nil {
 			return fmt.Errorf("bad end cid: %w", err)
 		}
@@ -72,12 +73,12 @@ func adsDistAction(cctx *cli.Context) error {
 		endStr = "head"
 	}
 
-	adCount, _, err := adDist.Get(cctx.Context, *addrInfo, startCid, endCid)
+	adCount, _, err := adDist.Get(ctx, *addrInfo, startCid, endCid)
 	if err != nil {
 		return err
 	}
 
-	if cctx.Bool("quiet") {
+	if cmd.Bool("quiet") {
 		fmt.Println(adCount)
 	} else {
 		fmt.Printf("Distance from %s to %s is %d\n", startCid, endStr, adCount)
