@@ -62,7 +62,6 @@ var adsCrawlFlags = []cli.Flag{
 		Aliases: []string{"q"},
 	},
 	timeoutFlag,
-	topicFlag,
 }
 
 func adsCrawlAction(ctx context.Context, cmd *cli.Command) error {
@@ -74,7 +73,6 @@ func adsCrawlAction(ctx context.Context, cmd *cli.Command) error {
 	provClient, err := adpub.NewClient(*addrInfo,
 		adpub.WithDeleteAfterRead(true),
 		adpub.WithEntriesDepthLimit(0),
-		adpub.WithTopicName(cmd.String("topic")),
 		adpub.WithHttpTimeout(cmd.Duration("timeout")))
 	if err != nil {
 		return err
