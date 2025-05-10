@@ -36,7 +36,6 @@ var adsListFlags = []cli.Flag{
 		Required: true,
 	},
 	timeoutFlag,
-	topicFlag,
 }
 
 func adsListAction(ctx context.Context, cmd *cli.Command) error {
@@ -47,7 +46,6 @@ func adsListAction(ctx context.Context, cmd *cli.Command) error {
 
 	provClient, err := adpub.NewClient(*addrInfo,
 		adpub.WithDeleteAfterRead(true),
-		adpub.WithTopicName(cmd.String("topic")),
 		adpub.WithHttpTimeout(cmd.Duration("timeout")))
 	if err != nil {
 		return err
