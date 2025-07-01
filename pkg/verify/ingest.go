@@ -190,14 +190,14 @@ var verifyIngestFlags = []cli.Flag{
 		Destination: &printUnindexedMhs,
 	},
 	&cli.BoolFlag{
-		Name:  "no-priv",
-		Usage: "Do no use reader-privacy for queries. If --dhstore also specified, use in place of --indexer",
+		Name:  "private",
+		Usage: "Use reader-privacy for queries.",
 	},
 }
 
 func beforeVerifyIngest(ctx context.Context, cmd *cli.Command) (context.Context, error) {
 	if len(cmd.StringSlice("indexer")) == 0 {
-		if cmd.Bool("no-priv") {
+		if !cmd.Bool("private") {
 			return ctx, cli.Exit("missing value for --indexer", 1)
 		}
 		if cmd.String("dhstore") == "" {
@@ -284,7 +284,18 @@ func verifyIngestFromProvider(ctx context.Context, cmd *cli.Command, provID peer
 	var clearFind *client.Client
 	var provCache *pcache.ProviderCache
 	var err error
-	if cmd.Bool("no-priv") {
+
+	if cmd.Bool("private") {
+		dhFind, err = client.NewDHashClient(
+			client.WithProvidersURL(cmd.StringSlice("indexer")...),
+			client.WithDHStoreURL(cmd.String("dhstore")),
+			client.WithPcacheTTL(0),
+		)
+		if err != nil {
+			return err
+		}
+		provCache = dhFind.PCache()
+	} else {
 		idxr := cmd.String("dhstore")
 		if idxr == "" {
 			idxr = cmd.StringSlice("indexer")[0]
@@ -298,16 +309,6 @@ func verifyIngestFromProvider(ctx context.Context, cmd *cli.Command, provID peer
 		if err != nil {
 			return err
 		}
-	} else {
-		dhFind, err = client.NewDHashClient(
-			client.WithProvidersURL(cmd.StringSlice("indexer")...),
-			client.WithDHStoreURL(cmd.String("dhstore")),
-			client.WithPcacheTTL(0),
-		)
-		if err != nil {
-			return err
-		}
-		provCache = dhFind.PCache()
 	}
 
 	// Get publisher address, for specified provider, from indexer.
@@ -430,21 +431,21 @@ func verifyIngestFromCar(ctx context.Context, cmd *cli.Command, provID peer.ID, 
 
 	var dhFind *client.DHashClient
 	var clearFind *client.Client
-	if cmd.Bool("no-priv") {
-		idxr := cmd.String("dhstore")
-		if idxr == "" {
-			idxr = cmd.StringSlice("indexer")[0]
-		}
-		clearFind, err = client.New(idxr)
-		if err != nil {
-			return err
-		}
-	} else {
+	if cmd.Bool("private") {
 		dhFind, err = client.NewDHashClient(
 			client.WithProvidersURL(cmd.StringSlice("indexer")...),
 			client.WithDHStoreURL(cmd.String("dhstore")),
 			client.WithPcacheTTL(0),
 		)
+		if err != nil {
+			return err
+		}
+	} else {
+		idxr := cmd.String("dhstore")
+		if idxr == "" {
+			idxr = cmd.StringSlice("indexer")[0]
+		}
+		clearFind, err = client.New(idxr)
 		if err != nil {
 			return err
 		}
@@ -515,21 +516,21 @@ func verifyIngestFromCarIndex(ctx context.Context, cmd *cli.Command, provID peer
 
 	var dhFind *client.DHashClient
 	var clearFind *client.Client
-	if cmd.Bool("no-priv") {
-		idxr := cmd.String("dhstore")
-		if idxr == "" {
-			idxr = cmd.StringSlice("indexer")[0]
-		}
-		clearFind, err = client.New(idxr)
-		if err != nil {
-			return err
-		}
-	} else {
+	if cmd.Bool("private") {
 		dhFind, err = client.NewDHashClient(
 			client.WithProvidersURL(cmd.StringSlice("indexer")...),
 			client.WithDHStoreURL(cmd.String("dhstore")),
 			client.WithPcacheTTL(0),
 		)
+		if err != nil {
+			return err
+		}
+	} else {
+		idxr := cmd.String("dhstore")
+		if idxr == "" {
+			idxr = cmd.StringSlice("indexer")[0]
+		}
+		clearFind, err = client.New(idxr)
 		if err != nil {
 			return err
 		}
