@@ -4,7 +4,7 @@ go 1.24.6
 
 require (
 	github.com/filecoin-project/go-address v1.2.0
-	github.com/ipfs/go-cid v0.5.0
+	github.com/ipfs/go-cid v0.6.0
 	github.com/ipfs/go-datastore v0.9.0
 	github.com/ipfs/go-log/v2 v2.9.0
 	github.com/ipld/go-car/v2 v2.16.0
@@ -19,7 +19,7 @@ require (
 	github.com/stretchr/testify v1.11.1
 	github.com/urfave/cli/v3 v3.6.1
 	github.com/ybbus/jsonrpc/v2 v2.1.7
-	golang.org/x/mod v0.29.0
+	golang.org/x/mod v0.30.0
 )
 
 require (
