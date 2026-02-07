@@ -7,7 +7,6 @@ import (
 type config struct {
 	depthLimit int64
 	p2pHost    host.Host
-	topic      string
 }
 
 type Option func(*config)
@@ -16,7 +15,6 @@ type Option func(*config)
 func getOpts(opts []Option) config {
 	cfg := config{
 		depthLimit: 5000,
-		topic:      "/indexer/ingest/mainnet",
 	}
 	for _, opt := range opts {
 		opt(&cfg)
@@ -36,15 +34,5 @@ func WithDepthLimit(limit int64) Option {
 func WithP2pHost(p2pHost host.Host) Option {
 	return func(c *config) {
 		c.p2pHost = p2pHost
-	}
-}
-
-// WithTopic configures the topic name used to get the head advertisement when
-// using data-transfer/graphsync.
-func WithTopic(topic string) Option {
-	return func(c *config) {
-		if topic != "" {
-			c.topic = topic
-		}
 	}
 }

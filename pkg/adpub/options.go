@@ -19,7 +19,6 @@ type config struct {
 	maxSyncRetry      uint64
 	p2pHost           host.Host
 	syncRetryBackoff  time.Duration
-	topic             string
 	delAfterRead      bool
 }
 
@@ -32,7 +31,6 @@ func getOpts(opts []Option) (config, error) {
 		entriesDepthLimit: defaultEntriesDepthLimit,
 		httpTimeout:       defaultHttpTimeout,
 		syncRetryBackoff:  500 * time.Millisecond,
-		topic:             "/indexer/ingest/mainnet",
 	}
 
 	for i, opt := range opts {
@@ -65,15 +63,6 @@ func WithMaxSyncRetry(r uint64) Option {
 func WithLibp2pHost(h host.Host) Option {
 	return func(c *config) error {
 		c.p2pHost = h
-		return nil
-	}
-}
-
-// WithTopicName sets the topic name on which the provider announces advertised
-// content. Defaults to '/indexer/ingest/mainnet'.
-func WithTopicName(topic string) Option {
-	return func(c *config) error {
-		c.topic = topic
 		return nil
 	}
 }
