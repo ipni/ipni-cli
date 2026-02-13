@@ -1,7 +1,6 @@
 package spinfo_test
 
 import (
-	"context"
 	"os"
 	"testing"
 
@@ -20,8 +19,7 @@ func TestSPAddrInfo(t *testing.T) {
 		t.Skip("Skipping lotus test. Set STI_LOTUS_TEST=yes to enable.")
 	}
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := t.Context()
 
 	addrInfo, err := spinfo.SPAddrInfo(ctx, gateway, testSPID)
 	require.NoError(t, err)
