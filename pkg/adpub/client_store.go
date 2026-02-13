@@ -164,7 +164,7 @@ func (s *ClientStore) getAdvertisement(ctx context.Context, id cid.Cid) (*Advert
 }
 
 func (s *ClientStore) list(ctx context.Context, nextCid cid.Cid, n int, w io.Writer) error {
-	for i := 0; i < n; i++ {
+	for range n {
 		ad, err := s.loadAd(ctx, nextCid)
 		if err != nil {
 			return err
@@ -185,7 +185,7 @@ func (s *ClientStore) list(ctx context.Context, nextCid cid.Cid, n int, w io.Wri
 }
 
 func (s *ClientStore) crawl(ctx context.Context, nextCid cid.Cid, n int, ads chan<- *Advertisement) (cid.Cid, error) {
-	for i := 0; i < n; i++ {
+	for range n {
 		ad, err := s.loadAd(ctx, nextCid)
 		if err != nil {
 			return cid.Undef, err

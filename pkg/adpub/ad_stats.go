@@ -20,8 +20,8 @@ type AdStats struct {
 	ctxIDRm map[string]bool
 	samples []*AdSample
 
-	mhCountDist    []interface{}
-	chunkCountDist []interface{}
+	mhCountDist    []any
+	chunkCountDist []any
 }
 
 type AdSample struct {

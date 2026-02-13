@@ -17,7 +17,7 @@ type ExpTipSet struct {
 	Cids []cid.Cid
 	//Blocks []*BlockHeader
 	//Height abi.ChainEpoch
-	Blocks []interface{}
+	Blocks []any
 	Height int64
 }
 
