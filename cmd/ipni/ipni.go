@@ -53,7 +53,7 @@ var versionCmd = &cli.Command{
 
 func versionAction(ctx context.Context, cmd *cli.Command) error {
 	const githubURL = "https://api.github.com/repos/ipni/ipni-cli/releases/latest"
-	fmt.Println(cmd.Version)
+	fmt.Println(ipnicli.Version)
 	resp, err := http.Get(githubURL)
 	if err != nil {
 		return fmt.Errorf("cannot check for newer version: %s", err)
